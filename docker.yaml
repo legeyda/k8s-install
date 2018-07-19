@@ -1,0 +1,18 @@
+---
+- hosts: localhost
+  tasks: 
+
+  - name: add key
+    apt_key:
+      url:   https://download.docker.com/linux/debian/gpg
+      state: present
+
+  - name: add repository
+    apt_repository:
+      repo:  deb deb [arch=amd64] https://download.docker.com/linux/debian
+      state: present
+
+  - name: install kubeadm
+    apt:
+      name: kubeadm
+      update_cache: yes

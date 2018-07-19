@@ -1,0 +1,62 @@
+---
+- hosts: cluster
+  tasks:
+
+    # - name: ensure certificates are generated
+    #   run_once: yes
+    #   delegate_to: localhost
+    #   make:  
+    #     chdir: '{{playbook_dir}}'
+    #     target: 'target/cert/{{item}}'
+    #     params: 
+    #       controller_hosts: '{{controller_hosts}}'
+    #   with_items:
+    #     - ca.pem 
+    #     - kubernetes.pem
+    #     - kubernetes-key.pem 
+
+
+    - name: ensure etcd for armv7 is built
+      run_once: yes
+      delegate_to: localhost
+      make:    
+        chdir: '{{playbook_dir}}'
+        target: target/bin/{{item}}
+      with_items:
+        - etcd
+        - etcdctl
+
+    - name: install etcd
+      copy: 
+        src:  '{{playbook_dir}}/target/bin/{{item}}'
+        dest: '/usr/local/bin/{{item}}'
+        mode: '+x'
+      with_items:
+        - etcd
+        - etcdctl
+
+    # - name: copy certificates
+    #   copy: 
+    #     src:  '{{playbook_dir}}/target/cert/{{item}}'
+    #     dest: '/etc/etcd'
+    #   with_items:
+    #     - ca.pem 
+    #     - kubernetes.pem
+    #     - kubernetes-key.pem
+
+    - name: create directories for etcd
+      file: path=/var/lib/etcd state=directory
+
+    - name: create systemd service
+      template: 
+        src:  '{{playbook_dir}}/src/etcd.service.template'
+        dest: '/etc/systemd/system/etcd.service'
+        mode: 644
+
+    - name: enable systemd service
+      systemd:
+        daemon_reload: yes
+        name: etcd
+        enabled: yes
+        state: restarted
+        masked: no
