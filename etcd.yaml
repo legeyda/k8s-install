@@ -1,19 +1,20 @@
 ---
-- hosts: cluster
+- hosts: "{{ hosts | default('etcd-nodes') }}"
+  gather_facts: no
   tasks:
-
-    # - name: ensure certificates are generated
-    #   run_once: yes
-    #   delegate_to: localhost
-    #   make:  
-    #     chdir: '{{playbook_dir}}'
-    #     target: 'target/cert/{{item}}'
-    #     params: 
-    #       controller_hosts: '{{controller_hosts}}'
-    #   with_items:
-    #     - ca.pem 
-    #     - kubernetes.pem
-    #     - kubernetes-key.pem 
+    - name: ensure certificates are generated
+      run_once: yes
+      delegate_to: localhost
+      make:  
+        chdir: '{{playbook_dir}}'
+        target: 'target/cert/{{item}}'
+        params: 
+          controller_hosts: '{{controller_hosts}}'
+      with_items:
+        - ca.pem
+        - kubernetes.pem
+        - kubernetes-key.pem
+      when: is_etcd_secure|bool
 
 
     - name: ensure etcd for armv7 is built
@@ -26,32 +27,63 @@
         - etcd
         - etcdctl
 
+
     - name: install etcd
       copy: 
         src:  '{{playbook_dir}}/target/bin/{{item}}'
         dest: '/usr/local/bin/{{item}}'
         mode: '+x'
+        backup: yes
       with_items:
         - etcd
         - etcdctl
 
-    # - name: copy certificates
-    #   copy: 
-    #     src:  '{{playbook_dir}}/target/cert/{{item}}'
-    #     dest: '/etc/etcd'
-    #   with_items:
-    #     - ca.pem 
-    #     - kubernetes.pem
-    #     - kubernetes-key.pem
+
+    - name: copy certificates
+      copy: 
+        src:  '{{playbook_dir}}/target/cert/{{item}}'
+        dest: '/etc/etcd'
+        backup: yes
+      with_items:
+        - ca.pem 
+        - kubernetes.pem
+        - kubernetes-key.pem
+      when: is_etcd_secure|bool
+
+
+    - name: check etcd data dir already exists
+      stat:
+        path: /var/lib/etcd
+      register: data_dir_info
+
+    - name: get local timestamp
+      shell: "date +%Y-%m-%d%H-%M-%S.%5N"
+      register: timestamp
+      when: data_dir_info.stat.exists
+
+    - name: enable systemd service
+      systemd:
+        name: etcd
+        state: stopped
+      ignore_errors: yes
+      when: data_dir_info.stat.exists
+
+    - name: backup etcd data
+      command: mv /var/lib/etcd /var/lib/etcd-backup-{{timestamp.stdout}}
+      when: data_dir_info.stat.exists
+
+      
 
     - name: create directories for etcd
       file: path=/var/lib/etcd state=directory
+
 
     - name: create systemd service
       template: 
         src:  '{{playbook_dir}}/src/etcd.service.template'
         dest: '/etc/systemd/system/etcd.service'
         mode: 644
+
 
     - name: enable systemd service
       systemd:
@@ -60,3 +92,7 @@
         enabled: yes
         state: restarted
         masked: no
+
+
+    # - name: check cluster
+    #   command: ETCDCTL_API=3 etcdctl member list --endpoints=https://127.0.0.1:2379 --cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem

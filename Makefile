@@ -3,10 +3,12 @@
 target?=target
 target_bin?=${target}/bin
 target_cert?=${target}/cert
+target_kubeconfig?=${target}/kubeconfig
 
-# controller_hosts should be set
+
+controller_hosts?=127.0.0.1
 worker_name?=default-worker
-worker_host?=127.0.0.0.1
+worker_host?=127.0.0.1
 
 comma:=,
 empty:=
@@ -82,37 +84,76 @@ ${kubectl}:
 endif
 
 
+
+
+
+
+
+
 testtt:
-	echo '${cfssl} ${cfssljson}'
+	echo '$(call certfiles,${target_cert}/ca)'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+define certfiles
+$(addprefix $(1),-key.pem .pem .csr)
+endef
+
 
 
 .PHONY: cert
 cert: \
-	${target_cert}/ca-key.pem                      ${target_cert}/ca.pem \
-	${target_cert}/admin-key.pem                   ${target_cert}/admin.pem \
-	${target_cert}/${worker_name}-key.pem          ${target_cert}/${worker_name}.pem \
-	${target_cert}/kube-controller-manager-key.pem ${target_cert}/kube-controller-manager.pem \
-	${target_cert}/kube-proxy-key.pem              ${target_cert}/kube-proxy.pem \
-	${target_cert}/kube-scheduler-key.pem          ${target_cert}/kube-scheduler.pem
+	$(call certfiles,${target_cert}/ca) \
+	$(call certfiles,${target_cert}/admin) \
+	$(call certfiles,${target_cert}/${worker_name}) \
+	$(call certfiles,${target_cert}/kube-controller-manager) \
+	$(call certfiles,${target_cert}/kube-proxy) \
+	$(call certfiles,${target_cert}/kube-scheduler) \
+	$(call certfiles,${target_cert}/kubernetes) \
+	$(call certfiles,${target_cert}/service-account)
 
 
 
 # Certificate Authority
-${target_cert}/ca-key.pem ${target_cert}/ca.pem ${target_cert}/ca.csr: src/ca-config.json src/ca-csr.json ${cfssl} ${cfssljson}
+$(call certfiles,${target_cert}/ca): src/ca-config.json src/ca-csr.json ${cfssl} ${cfssljson}
 	mkdir -p '$(dir $@)'
-	${cfssl} gencert -initca src/ca-csr.json | ${cfssljson} -bare ${target_cert}/ca
+	${cfssl} gencert \
+	  -initca src/ca-csr.json \
+	  -config=src/ca-config.json | ${cfssljson} -bare ${target_cert}/ca
 
 
 
-# The Kubelet Client Certificates
-${target_cert}/admin-key.pem ${target_cert}/admin.pem ${target_cert}/admin.csr: src/ca-config.json src/admin-csr.json ${target_cert}/ca.pem ${target_cert}/ca-key.pem ${cfssl} ${cfssljson}
+# The Kubelet Client Certificates            admin
+# The Controller Manager Client Certificate  kube-controller-manager
+# The Kube Proxy Client Certificate          kube-proxy
+# The Scheduler Client Certificate           kube-scheduler
+# The Kubernetes API Server Certificate      kubernetes
+# The Service Account Key Pair               service-account
+$(call certfiles,${target_cert}/%): ${target_cert}/ca.pem ${target_cert}/ca-key.pem src/ca-config.json src/$*-csr.json ${cfssl} ${cfssljson}
 	mkdir -p '$(dir $@)'
 	${cfssl} gencert \
 	  -ca=${target_cert}/ca.pem \
 	  -ca-key=${target_cert}/ca-key.pem \
 	  -config=src/ca-config.json \
 	  -profile=kubernetes \
-	  src/admin-csr.json | ${cfssljson} -bare ${target_cert}/admin
+	  src/$*-csr.json | ${cfssljson} -bare ${target_cert}/$*
 
 
 
@@ -121,7 +162,7 @@ ${target_cert}/${worker_name}-csr.json: src/instance-csr.json
 	mkdir -p '$(dir $@)'
 	sed -e 's/{{name}}/${worker_name}/g; s/{{host}}/${worker_host}/g; ' $< > $@
 
-${target_cert}/${worker_name}.pem ${target_cert}/${worker_name}-key.pem: ${target_cert}/${worker_name}-csr.json ${cfssl} ${cfssljson}
+$(call certfiles,${target_cert}/${worker_name}): ${target_cert}/${worker_name}-csr.json ${cfssl} ${cfssljson}
 	mkdir -p '$(dir $@)'
 	${cfssl} gencert \
 	  -ca=${target_cert}/ca.pem \
@@ -133,64 +174,16 @@ ${target_cert}/${worker_name}.pem ${target_cert}/${worker_name}-key.pem: ${targe
 
 
 
-# The Controller Manager Client Certificate
-${target_cert}/kube-controller-manager-key.pem ${target_cert}/kube-controller-manager.pem: ${target_cert}/ca.pem ${target_cert}/ca-key.pem src/ca-config.json src/kube-controller-manager-csr.json ${cfssl} ${cfssljson}
-	mkdir -p '$(dir $@)'
-	${cfssl} gencert \
-	  -ca=${target_cert}/ca.pem \
-	  -ca-key=${target_cert}/ca-key.pem \
-	  -config=src/ca-config.json \
-	  -profile=kubernetes \
-	  src/kube-controller-manager-csr.json | ${cfssljson} -bare ${target_cert}/kube-controller-manager
 
 
 
-# The Kube Proxy Client Certificate
-${target_cert}/kube-proxy-key.pem ${target_cert}/kube-proxy.pem: ${target_cert}/ca.pem ${target_cert}/ca-key.pem src/ca-config.json ${cfssl} ${cfssljson}
-	mkdir -p '$(dir $@)'
-	${cfssl} gencert \
-	  -ca=${target_cert}/ca.pem \
-	  -ca-key=${target_cert}/ca-key.pem \
-	  -config=src/ca-config.json \
-	  -profile=kubernetes \
-	  src/kube-proxy-csr.json | ${cfssljson} -bare ${target_cert}/kube-proxy
 
 
 
-# The Scheduler Client Certificate
-${target_cert}/kube-scheduler-key.pem ${target_cert}/kube-scheduler.pem: src/ca-config.json src/kube-scheduler-csr.json ${target_cert}/ca.pem ${target_cert}/ca-key.pem ${cfssl} ${cfssljson}
-	mkdir -p '$(dir $@)'
-	${cfssl} gencert \
-	  -ca=${target_cert}/ca.pem \
-	  -ca-key=${target_cert}/ca-key.pem \
-	  -config=src/ca-config.json \
-	  -profile=kubernetes \
-	  src/kube-scheduler-csr.json | ${cfssljson} -bare ${target_cert}/kube-scheduler
 
 
 
-# The Kubernetes API Server Certificate
-${target_cert}/kubernetes-key.pem ${target_cert}/kubernetes.pem: src/ca-config.json src/kubernetes-csr.json ${target_cert}/ca.pem ${target_cert}/ca-key.pem ${cfssl} ${cfssljson}
-	@test -n '${controller_hosts}' # variable controller_hosts must have comma-separated addresses of controller hosts
-	mkdir -p '$(dir $@)'
-	${cfssl} gencert \
-	  -ca=${target_cert}/ca.pem \
-	  -ca-key=${target_cert}/ca-key.pem \
-	  -config=src/ca-config.json \
-	  -hostname=$(subst ${space},${comma},${controller_hosts}),https://127.0.0.1 \
-	  -profile=kubernetes \
-	  src/kubernetes-csr.json | ${cfssljson} -bare ${target_cert}/kubernetes
 
-
-# The Service Account Key Pair
-${target_cert}/service-account-key.pem ${target_cert}/service-account.pem: src/ca-config.json src/service-account-csr.json ${target_cert}/ca.pem ${target_cert}/ca-key.pem ${cfssl} ${cfssljson}
-	mkdir -p '$(dir $@)'
-	${cfssl} gencert \
-	  -ca=${target_cert}/ca.pem \
-	  -ca-key=${target_cert}/ca-key.pem \
-	  -config=src/ca-config.json \
-	  -profile=kubernetes \
-	  src/service-account-csr.json | ${cfssljson} -bare ${target_cert}/service-account
 
 
 
@@ -207,3 +200,46 @@ ${target_bin}/etcd ${target_bin}/etcdctl:
 	docker run --rm -it -v '${target}/checkout/etcd':/usr/src/myapp -w /usr/src/myapp -e GOOS=linux -e GOARCH=arm golang:1.9 bash ./build
 	mkdir -p '$(dir $@)'
 	cp '${target}/checkout/etcd/bin/etcd' '$@'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+${target_kubeconfig}/%.kubeconfig: ${target_cert}/ca.pem
+	rm -rf '$@'
+	mkdir -p $(dir $@)
+
+	kubectl config set-cluster kubernetes-the-hard-way \
+		--certificate-authority=${target_cert}/ca.pem \
+		--embed-certs=true \
+		--server=https://${KUBERNETES_PUBLIC_ADDRESS}:6443 \
+		--kubeconfig='$@'
+
+	kubectl config set-credentials system:node:${instance} \
+		--client-certificate=${instance}.pem \
+		--client-key=${instance}-key.pem \
+		--embed-certs=true \
+		--kubeconfig='$@'
+
+	kubectl config set-context default \
+		--cluster=kubernetes-the-hard-way \
+		--user=system:node:${instance} \
+		--kubeconfig='$@'
+
+	kubectl config use-context default --kubeconfig=${instance}.kubeconfig
+
+
+
+.PHONY: kubectl-shell
+kubectl-shell:

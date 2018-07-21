@@ -38,3 +38,8 @@ ExecStart=/usr/local/bin/etcd \
   --initial-cluster {{initial_cluster}} \
   --initial-cluster-state new \
   --data-dir /var/lib/etcd
+
+
+
+
+ETCDCTL_API=3 etcdctl member list --endpoints=http://127.0.0.1:2379

@@ -1,3 +1,4 @@
+{% set protocol = 'https' if is_etcd_secure|bool else 'http' %}
 [Unit]
 Description=etcd
 Documentation=https://github.com/coreos
@@ -6,12 +7,26 @@ Documentation=https://github.com/coreos
 Environment=ETCD_UNSUPPORTED_ARCH=arm  
 ExecStart=/usr/local/bin/etcd \
   --name {{name}} \
-  --initial-advertise-peer-urls http://{{inventory_hostname}}:2380 \
-  --listen-peer-urls http://{{inventory_hostname}}:2380 \
-  --listen-client-urls http://{{inventory_hostname}}:2379,http://127.0.0.1:2379 \
-  --advertise-client-urls http://{{inventory_hostname}}:2379 \
+{% if is_etcd_secure|bool %}
+  --client-cert-auth \
+  --cert-file       /etc/etcd/kubernetes.pem \
+  --key-file        /etc/etcd/kubernetes-key.pem \
+  --trusted-ca-file /etc/etcd/ca.pem \
+  --peer-client-cert-auth \
+  --peer-cert-file       /etc/etcd/kubernetes.pem \
+  --peer-key-file        /etc/etcd/kubernetes-key.pem \
+  --peer-trusted-ca-file /etc/etcd/ca.pem \
+{% endif %}
+  --initial-advertise-peer-urls {{protocol}}://{{inventory_hostname}}:2380 \
+  --listen-peer-urls {{protocol}}://{{inventory_hostname}}:2380 \
+  --listen-client-urls {{protocol}}://{{inventory_hostname}}:2379,{{protocol}}://127.0.0.1:2379 \
+  --advertise-client-urls {{protocol}}://{{inventory_hostname}}:2379 \
   --initial-cluster-token etcd-cluster-0 \
-  --initial-cluster {{initial_cluster}} \
+  --initial-cluster {% for host in ansible_play_batch -%}
+  {% if 'name' in hostvars[host] -%}
+    {{hostvars[host].name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
+  {%- endif %}
+{%- endfor %} \
   --initial-cluster-state new \
   --data-dir /var/lib/etcd
 Restart=on-failure
