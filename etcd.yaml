@@ -1,13 +1,12 @@
 ---
-- hosts: "{{ hosts | default('etcd-nodes') }}"
+- hosts: etcd-nodes
   gather_facts: no
   tasks:
 
-
     - name: certificates
-      when: is_cluster_secure|bool
-      
+      when: is_cluster_secure | default(True) | bool
       block:
+
       - name: ensure certificates are generated
         run_once: yes
         delegate_to: localhost
@@ -15,7 +14,7 @@
           chdir: '{{playbook_dir}}'
           target: 'target/cert/{{item}}'
           params: 
-            cluster_hosts: "{{ ','.join(hosts | default(groups['cluster']) | default(ansible_play_batch)) }}"
+            cluster_hosts: "{{ ','.join(ansible_play_batch) }}"
         with_items:
           - ca.pem 
           - kubernetes.pem
@@ -36,56 +35,29 @@
           - kubernetes.pem
           - kubernetes-key.pem
 
-
-
     - name: ensure etcd for armv7 is built
       run_once: yes
       delegate_to: localhost
       make:    
         chdir: '{{playbook_dir}}'
-        target: target/bin/{{item}}
+        target: target/lib/linux/arm/{{item}}
       with_items:
         - etcd
         - etcdctl
 
     - name: install etcd
       copy: 
-        src:  '{{playbook_dir}}/target/bin/{{item}}'
+        src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
         dest: '/usr/local/bin/{{item}}'
         mode: '+x'
-        backup: yes
       with_items:
         - etcd
         - etcdctl
 
-
-
-    - name: etcd data
-      block:
-      - name: check etcd data dir already exists
-        stat:
-          path: /var/lib/etcd
-        register: data_dir_info
-
-      - name: backup etcd data
-        when: data_dir_info.stat.exists
-        block:
-          - name: get local timestamp
-            shell: "date +%Y-%m-%d%H-%M-%S.%5N"
-            register: timestamp
-
-          - name: stop etcd service
-            systemd:
-              name: etcd
-              state: stopped
-            ignore_errors: yes
-
-          - name: backup etcd data
-            command: mv /var/lib/etcd /var/lib/etcd-backup-{{timestamp.stdout}}
-
-      - name: create directories for etcd
-        file: path=/var/lib/etcd state=directory
-
+    - name: create directories for etcd data
+      file:
+        path: /var/lib/etcd
+        state: directory
 
     - name: create systemd service
       template: 
@@ -108,9 +80,9 @@
 
     - name: check cluster
       shell: >
-        ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|bool else 'http' %}
+        ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
         /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379 
-        {% if is_cluster_secure|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
+        {% if is_cluster_secure|default(True)|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
       register: etcdctl
 
     - name: show output 

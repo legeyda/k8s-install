@@ -1,0 +1,136 @@
+---
+- hosts: k8s-controllers
+  gather_facts: no
+  tasks:
+
+    - name: certificates
+      when: 'is_cluster_secure|default(True)|bool'
+      
+      block:
+      - name: ensure certificates are generated
+        run_once: yes
+        delegate_to: localhost
+        make:  
+          chdir: '{{playbook_dir}}'
+          target: 'target/cert/{{item}}'
+          params: 
+            cluster_hosts: "{{ ','.join(ansible_play_batch) }}"
+        with_items:
+          - ca.pem 
+          - kubernetes.pem
+          - kubernetes-key.pem
+
+      # - name: ensure etcd certificate dir is created
+      #   file: 
+      #     path: /usr/local/bin/
+      #     state: directory
+
+      - name: copy certificates
+        copy: 
+          src:  '{{playbook_dir}}/target/cert/{{item}}'
+          dest: '/etc/etcd/{{item}}'
+          backup: yes
+        with_items:
+          - ca.pem 
+          - kubernetes.pem
+          - kubernetes-key.pem
+
+
+
+
+
+
+    - name: ensure binaries are available
+      run_once: yes
+      delegate_to: localhost
+      make:  
+        chdir: '{{playbook_dir}}'
+        target: 'target/lib/linux/arm/{{item}}'
+      with_items:
+        - kube-apiserver
+        - kube-controller-manager
+        - kube-scheduler
+        - kubectl
+
+    - name: ensure binaries target directory exists
+      file:
+        path: /usr/local/bin/
+        state: directory
+
+    - name: copy binaries
+      copy:
+        src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
+        dest: '/usr/local/bin/{{item}}'
+        mode: '+x'
+      with_items:
+        - kube-apiserver
+        - kube-controller-manager
+        - kube-scheduler
+        - kubectl
+
+
+
+
+
+    - name: ensure
+      file:
+        path: /etc/kubernetes/config
+        state: directory
+
+
+
+
+
+    - name: ensure
+      file:
+        path: /var/lib/kubernetes/
+        state: directory
+
+
+
+
+    - name: etcd data
+      block:
+      - name: check etcd data dir already exists
+        stat:
+          path: /var/lib/etcd
+        register: data_dir_info
+
+      - name: backup etcd data
+        when: data_dir_info.stat.exists
+        block:
+          - name: get local timestamp
+            shell: "date +%Y-%m-%d%H-%M-%S.%5N"
+            register: timestamp
+
+          - name: stop etcd service
+            systemd:
+              name: etcd
+              state: stopped
+            ignore_errors: yes
+
+          - name: backup etcd data
+            command: mv /var/lib/etcd /var/lib/etcd-backup-{{timestamp.stdout}}
+
+      - name: create directories for etcd
+        file: path=/var/lib/etcd state=directory
+
+
+    - name: create systemd service
+      template: 
+        src:  '{{playbook_dir}}/src/etcd.service.template'
+        dest: '/etc/systemd/system/etcd.service'
+        mode: 644
+
+    - name: enable systemd service
+      systemd:
+        daemon_reload: yes
+        name: etcd
+        enabled: yes
+        state: restarted
+        masked: no
+
+    - name: wait started
+      pause: 
+        seconds: 3
+        prompt: etcd cluster is started, wait a bit till it's up

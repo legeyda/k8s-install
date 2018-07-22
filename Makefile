@@ -1,10 +1,10 @@
 
 
 target?=target
-target_bin?=${target}/bin
+target_download?=${target}/download
+target_lib=${target}/lib
 target_cert?=${target}/cert
 target_kubeconfig?=${target}/kubeconfig
-
 
 cluster_hosts?=127.0.0.1
 worker_name?=default-worker
@@ -16,82 +16,30 @@ space:=$(empty) $(empty)
 percent:=%
 
 
-.PHONY: all
-all: cert
+curl?=curl
+download:=${curl} --location --create-dirs
+k8s_binary_url?=https://storage.googleapis.com/kubernetes-release/archive/anago-v1.10.0-alpha.1/k8s.io/kubernetes/_output-v1.10.0-alpha.1/gcs-stage/v1.10.0-alpha.1/bin
 
 
-
-# download cfssl
-ifneq (,$(shell which cfssl 2>/dev/null))
-cfssl?=cfssl
+# os
+ifneq (,$(findstring cygwin,$(shell uname -a | tr A-Z a-z)))
+os:=windows
 else
-cfssl?=${target_bin}/cfssl
-endif
-ifeq (cfssl,${cfssl})
-cfssl:=$(shell which cfssl 2>/dev/null)
-${cfssl}:	
-	# cfssl must be in the path
-else ifneq (,$(findstring cygwin,$(call lc,$(shell uname -a))))
-${cfssl}:
-	mkdir -p '$(dir $@)'
-	curl -o "$@" https://pkg.cfssl.org/R1.2/cfssl_windows-amd64.exe
-	chmod +x $@
-else
-${cfssl}:
-	$(error unsupported platform $(shell uname) for cfssl) 
+os:=unknown
 endif
 
-
-# download cfssljson
-ifneq (,$(shell which cfssljson 2>/dev/null))
-cfssljson?=cfssljson
+# arch
+ifneq (,$(findstring x86_64,$(shell uname -a | tr A-Z a-z)))
+arch:=amd64
 else
-cfssljson?=${target_bin}/cfssljson
+arch:=unknown
 endif
-ifeq (cfssljson,${cfssljson})
-cfssljson:=$(shell which cfssljson 2>/dev/null)
-${cfssljson}:
-	# cfssljson must be in the path
-else ifneq (,$(findstring Cygwin,$(call lc,$(shell uname -a))))
-${cfssljson}:
-	mkdir -p '$(dir $@)'
-	curl -o "$@" https://pkg.cfssl.org/R1.2/cfssljson_windows-amd64.exe
-	chmod +x $@
-else
-${cfssljson}:
-	$(error unsupported platform $(shell uname) for cfssljson) 
-endif
-
-
-# download kubectl
-ifneq (,$(shell which kubectl 2>/dev/null))
-kubectl?=kubectl
-else
-kubectl?=${target_bin}/kubectl
-endif
-ifeq (kubectl,${kubectl})
-kubectl:=$(shell which kubectl 2>/dev/null)
-${kubectl}:
-	# kubectl must be in the path
-else ifneq (,$(findstring Cygwin,$(call lc,$(shell uname -a))))
-${kubectl}:
-	mkdir -p '$(dir $@)'
-	curl -o "$@" https://storage.googleapis.com/kubernetes-release/archive/anago-v1.10.0-alpha.1/k8s.io/kubernetes/_output-v1.10.0-alpha.1/dockerized/bin/windows/amd64/kubectl.exe
-	chmod +x $@
-else
-${kubectl}:
-	$(error unsupported platform $(shell uname) for kubectl) 
-endif
-
-
-
-
 
 
 
 
 testtt:
-	echo '$(addprefix target/cert/,${percent}.pem)'
+	bash -c 'bash --init-file < (echo "echo hello")'
 
 
 
@@ -99,6 +47,61 @@ testtt:
 
 
 
+
+.PHONY: all
+all: cert
+
+
+
+
+
+
+
+
+
+
+
+# ======== LOCAL MACHINE TOOLS ========
+
+
+cfssl?=${target_lib}/${os}/${arch}/cfssl
+cfssljson?=${target_lib}/${os}/${arch}/cfssljson
+kubectl?=${target_lib}/${os}/${arch}/kubectl
+etcdctl?=${target_lib}/${os}/${arch}/etcdctl
+
+
+${target_lib}/windows/amd64/cfssl:
+	${download} '$@' https://pkg.cfssl.org/R1.2/cfssl_windows-amd64.exe
+	chmod +x '$@'
+
+${target_lib}/windows/amd64/cfssljson:
+	${download} '$@' https://pkg.cfssl.org/R1.2/cfssljson_windows-amd64.exe
+	chmod +x '$@'
+
+${target_lib}/windows/amd64/kubectl:
+	${download} '$@' ${k8s_binary_url}/windows/amd64/kubectl.exe
+	chmod +x '$@'
+
+${target_lib}/windows/amd64/etcdctl:
+	rm -rf '${target_download}'/etcd-v3.3.8-windows-amd64*
+	${download} --output '${target_download}/etcd-v3.3.8-windows-amd64.zip' https://github.com/coreos/etcd/releases/download/v3.3.8/etcd-v3.3.8-windows-amd64.zip
+	cd ${target_download}; unzip etcd-v3.3.8-windows-amd64
+	cp ${target_download}/etcd-v3.3.8-windows-amd64/etcdctl.exe '$@'
+	chmod +x '$@'
+
+
+
+
+
+
+
+
+
+
+
+
+
+# ======== CERTIFICATES ========
 
 
 define certfiles
@@ -176,22 +179,36 @@ $(call certfiles,${target_cert}/${worker_name}): ${target_cert}/${worker_name}-c
 
 
 
-
-
-
-#
-${target}/etcd.service: src/etcd.service.template
-
-
+# ======== ARM BINARIES ========
 
 # build etcd for armv7
-${target_bin}/etcd ${target_bin}/etcdctl:
+${target_lib}/linux/arm/etcd ${target_lib}/linux/arm/etcdctl:
 	rm -rf '${target}/checkout/etcd'
 	mkdir -p '${target}/checkout/etcd'
 	git clone git@github.com:coreos/etcd.git '${target}/checkout/etcd'
 	docker run --rm -it -v '${target}/checkout/etcd':/usr/src/myapp -w /usr/src/myapp -e GOOS=linux -e GOARCH=arm golang:1.9 bash ./build
 	mkdir -p '$(dir $@)'
 	cp '${target}/checkout/etcd/bin/etcd' '$@'
+
+# 
+${target_lib}/linux/arm/kube%:
+	${download} --output '$@' ${k8s_binary_url}/linux/arm/kube$*
+	chmod +x '$@'
+
+
+
+
+
+
+
+
+
+
+
+
+
+
+
 
 
 
@@ -231,7 +248,3 @@ ${target_kubeconfig}/%.kubeconfig: ${target_cert}/ca.pem
 
 	kubectl config use-context default --kubeconfig=${instance}.kubeconfig
 
-
-
-.PHONY: kubectl-shell
-kubectl-shell:

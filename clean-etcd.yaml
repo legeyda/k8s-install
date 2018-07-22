@@ -1,8 +1,0 @@
----
-- hosts: "{{ hosts | default('etcd-nodes') }}"
-  gather_facts: no
-  tasks:
-    - name: ensure certificates are generated
-      file:
-        name:  /var/lib/etcd
-        state: absent
