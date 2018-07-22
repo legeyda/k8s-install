@@ -1,4 +1,4 @@
-{% set protocol = 'https' if is_etcd_secure|bool else 'http' %}
+{% set protocol = 'https' if is_cluster_secure|bool else 'http' %}
 [Unit]
 Description=etcd
 Documentation=https://github.com/coreos
@@ -7,7 +7,7 @@ Documentation=https://github.com/coreos
 Environment=ETCD_UNSUPPORTED_ARCH=arm  
 ExecStart=/usr/local/bin/etcd \
   --name {{name}} \
-{% if is_etcd_secure|bool %}
+{% if is_cluster_secure|bool %}
   --client-cert-auth \
   --cert-file       /etc/etcd/kubernetes.pem \
   --key-file        /etc/etcd/kubernetes-key.pem \

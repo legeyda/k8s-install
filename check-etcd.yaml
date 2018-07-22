@@ -1,0 +1,14 @@
+---
+- hosts: "{{ hosts | default('etcd-nodes') }}"
+  gather_facts: no
+  tasks:
+    - name: check cluster
+      shell: >
+        ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|bool else 'http' %}
+        /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379
+        {% if is_cluster_secure|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
+      register: etcdctl
+
+    - name: show output 
+      debug:
+        msg: '{{etcdctl.stdout}}'

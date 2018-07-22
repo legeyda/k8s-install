@@ -6,14 +6,14 @@ target_cert?=${target}/cert
 target_kubeconfig?=${target}/kubeconfig
 
 
-controller_hosts?=127.0.0.1
+cluster_hosts?=127.0.0.1
 worker_name?=default-worker
 worker_host?=127.0.0.1
 
 comma:=,
 empty:=
 space:=$(empty) $(empty)
-
+percent:=%
 
 
 .PHONY: all
@@ -91,18 +91,7 @@ endif
 
 
 testtt:
-	echo '$(call certfiles,${target_cert}/ca)'
-
-
-
-
-
-
-
-
-
-
-
+	echo '$(addprefix target/cert/,${percent}.pem)'
 
 
 
@@ -117,7 +106,6 @@ $(addprefix $(1),-key.pem .pem .csr)
 endef
 
 
-
 .PHONY: cert
 cert: \
 	$(call certfiles,${target_cert}/ca) \
@@ -129,6 +117,9 @@ cert: \
 	$(call certfiles,${target_cert}/kubernetes) \
 	$(call certfiles,${target_cert}/service-account)
 
+.PHONY: clean-cert
+clean-cert:
+	rm -rf '${target_cert}'
 
 
 # Certificate Authority
@@ -146,13 +137,14 @@ $(call certfiles,${target_cert}/ca): src/ca-config.json src/ca-csr.json ${cfssl}
 # The Scheduler Client Certificate           kube-scheduler
 # The Kubernetes API Server Certificate      kubernetes
 # The Service Account Key Pair               service-account
-$(call certfiles,${target_cert}/%): ${target_cert}/ca.pem ${target_cert}/ca-key.pem src/ca-config.json src/$*-csr.json ${cfssl} ${cfssljson}
+$(call certfiles,${target_cert}/${percent}): ${target_cert}/ca.pem ${target_cert}/ca-key.pem src/ca-config.json src/%-csr.json ${cfssl} ${cfssljson}
 	mkdir -p '$(dir $@)'
 	${cfssl} gencert \
 	  -ca=${target_cert}/ca.pem \
 	  -ca-key=${target_cert}/ca-key.pem \
 	  -config=src/ca-config.json \
 	  -profile=kubernetes \
+	  -hostname=${cluster_hosts},127.0.0.1 \
 	  src/$*-csr.json | ${cfssljson} -bare ${target_cert}/$*
 
 
