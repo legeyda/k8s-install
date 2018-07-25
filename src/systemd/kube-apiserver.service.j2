@@ -1,12 +1,13 @@
+{% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
 [Unit]
 Description=Kubernetes API Server
 Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
 ExecStart=/usr/local/bin/kube-apiserver \
-  --advertise-address=${INTERNAL_IP} \
+  --advertise-address={{inventory_hostname}} \
   --allow-privileged=true \
-  --apiserver-count=3 \
+  --apiserver-count={{ groups[cluster_group_name | default('cluster')] | default(ansible_play_batch) }} \
   --audit-log-maxage=30 \
   --audit-log-maxbackup=3 \
   --audit-log-maxsize=100 \
@@ -16,10 +17,16 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --client-ca-file=/var/lib/kubernetes/ca.pem \
   --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
   --enable-swagger-ui=true \
+{% if is_cluster_secure|default(True)|bool %}  
   --etcd-cafile=/var/lib/kubernetes/ca.pem \
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \
   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \
-  --etcd-servers=https://10.240.0.10:2379,https://10.240.0.11:2379,https://10.240.0.12:2379 \
+{% endif %}
+  --etcd-servers={% for host in groups[etcd_group_name | default('etcd-nodes')] | default(ansible_play_batch) -%}
+  {% if 'name' in hostvars[host] -%}
+    {{hostvars[host].name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
+  {%- endif %}
+{%- endfor %} \
   --event-ttl=1h \
   --experimental-encryption-provider-config=/var/lib/kubernetes/encryption-config.yaml \
   --kubelet-certificate-authority=/var/lib/kubernetes/ca.pem \

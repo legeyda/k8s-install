@@ -3,6 +3,21 @@
   gather_facts: no
   tasks:
 
+    - name: configure cluster settings for makefile
+      delegate_to: localhost
+      run_once: yes
+      copy: 
+        content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
+        dest: '{{playbook_dir}}/target/cluster_hosts'
+
+    - name: ensure directories exist
+      file: 
+        path: '{{item}}'
+        state: directory
+      with_items:
+        - /etc/etcd
+        - /var/lib/etcd
+
     - name: certificates
       when: is_cluster_secure | default(True) | bool
       block:
@@ -12,56 +27,41 @@
         delegate_to: localhost
         make:  
           chdir: '{{playbook_dir}}'
-          target: 'target/cert/{{item}}'
-          params: 
-            cluster_hosts: "{{ ','.join(ansible_play_batch) }}"
-        with_items:
+          target: 'target/cert/system/{{item}}'
+        with_items: &cert_files
           - ca.pem 
           - kubernetes.pem
           - kubernetes-key.pem
-
-      - name: ensure etcd certificate dir is created
-        file: 
-          path: /etc/etcd
-          state: directory
 
       - name: copy certificates
         copy: 
           src:  '{{playbook_dir}}/target/cert/{{item}}'
           dest: '/etc/etcd/{{item}}'
           backup: yes
-        with_items:
-          - ca.pem 
-          - kubernetes.pem
-          - kubernetes-key.pem
+        with_items: *cert_files
 
-    - name: ensure etcd for armv7 is built
-      run_once: yes
-      delegate_to: localhost
-      make:    
-        chdir: '{{playbook_dir}}'
-        target: target/lib/linux/arm/{{item}}
-      with_items:
-        - etcd
-        - etcdctl
+    - name: binaries
+      block:
+      - name: ensure etcd for armv7 is built
+        delegate_to: localhost
+        run_once: yes
+        make:    
+          chdir: '{{playbook_dir}}'
+          target: target/lib/linux/arm/{{item}}
+        with_items: &binary_names
+          - etcd
+          - etcdctl
 
-    - name: install etcd
-      copy: 
-        src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
-        dest: '/usr/local/bin/{{item}}'
-        mode: '+x'
-      with_items:
-        - etcd
-        - etcdctl
-
-    - name: create directories for etcd data
-      file:
-        path: /var/lib/etcd
-        state: directory
+      - name: install etcd binaries
+        copy: 
+          src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
+          dest: '/usr/local/bin/{{item}}'
+          mode: '+x'
+        with_items: *binary_names
 
     - name: create systemd service
       template: 
-        src:  '{{playbook_dir}}/src/etcd.service.template'
+        src:  '{{playbook_dir}}/src/systemd/etcd.service.j2'
         dest: '/etc/systemd/system/etcd.service'
         mode: 644
 
@@ -73,18 +73,16 @@
         state: restarted
         masked: no
 
-    - name: wait started
-      pause: 
-        seconds: 3
-        prompt: etcd cluster is started, wait a bit till it's up
 
-    - name: check cluster
-      shell: >
-        ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
-        /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379 
-        {% if is_cluster_secure|default(True)|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
-      register: etcdctl
-
-    - name: show output 
-      debug:
-        msg: '{{etcdctl.stdout}}'
+    - name: check cluster status
+      block:
+      - pause: 
+          seconds: 3
+          prompt: etcd cluster is started, wait a bit till it's up
+      - shell: >
+          ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
+          /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379 
+          {% if is_cluster_secure|default(True)|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
+        register: etcdctl
+      - debug:
+          msg: '{{etcdctl.stdout}}'
