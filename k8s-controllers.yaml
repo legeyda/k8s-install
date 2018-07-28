@@ -3,12 +3,29 @@
   gather_facts: no
   tasks:
 
+    - stat:
+        path: '{{playbook_dir}}/target/etcd_hosts'
+      delegate_to: localhost
+      run_once: yes
+      register: etcd_hosts_stats
+
+    - fail:
+        msg: '{{playbook_dir}}/target/etcd_hosts should exist'
+      delegate_to: localhost
+      run_once: yes
+      when: not etcd_hosts_stats.exists
+
+    - name: guess controller name
+      set_fact:
+        k8s_controller_name: '{{ k8s_controller_name | default(name) | default("controller-" + str(ansible_play_batch.index(inventory_hostname))) }}'
+
     - name: configure cluster settings for makefile
       delegate_to: localhost
       run_once: yes
       copy: 
-        content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch) }}"
+        content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
         dest: '{{playbook_dir}}/target/cluster_hosts'
+        force: yes
 
     - name: ensure directories
       file:
@@ -83,8 +100,9 @@
 
 
     - name: kubeconfigs
-      blocks:
-        - shell: kubectl config set-cluster k8s-cluster > 
+      block:
+        - shell: > 
+                 kubectl config set-cluster k8s-cluster
                  --certificate-authority=/var/lib/kubernetes/ca.pem
                  --embed-certs=true
                  --server=https://127.0.0.1:6443
@@ -95,21 +113,25 @@
             - {id: 'kube-proxy',              cn: 'system:kube-proxy'}
             - {id: 'kube-scheduler',          cn: 'system:kube-scheduler'}
 
-        - shell: kubectl config set-credentials {{item.id}} >
+        - shell: >
+                kubectl config set-credentials {{item.id}}
                 --client-certificate=/var/lib/kubernetes/ca.pem
                 --client-key=/var/lib/kubernetes/{{item.id}}-key.pem
                 --embed-certs=true
                 --kubeconfig=/var/lib/kubernetes/{{item.id}}.kubeconfig
           with_items: *kube_role_names
 
-        - shell: kubectl config set-context default >
+        - shell: >
+                 kubectl config set-context default
                  --cluster=k8s-cluster
                  --user={{item.cn}}
                  --kubeconfig=/var/lib/kubernetes/{{item.id}}.kubeconfig
           with_items: *kube_role_names
 
-        - shell: kubectl config use-context default --kubeconfig=/var/lib/kubernetes/{{item.id}}.kubeconfig
-          with_items: *kube_role_names'
+        - shell: >
+                 kubectl config use-context default 
+                 --kubeconfig=/var/lib/kubernetes/{{item.id}}.kubeconfig
+          with_items: *kube_role_names
 
 
     - name: rbac role definitions

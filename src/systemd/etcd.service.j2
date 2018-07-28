@@ -6,7 +6,7 @@ Documentation=https://github.com/coreos
 [Service]
 Environment=ETCD_UNSUPPORTED_ARCH=arm  
 ExecStart=/usr/local/bin/etcd \
-  --name {{name}} \
+  --name {{etcd_node_name | default(name)}} \
 {% if is_cluster_secure|default(True)|bool %}
   --client-cert-auth \
   --cert-file       /etc/etcd/kubernetes.pem \
@@ -23,8 +23,8 @@ ExecStart=/usr/local/bin/etcd \
   --advertise-client-urls {{protocol}}://{{inventory_hostname}}:2379 \
   --initial-cluster-token etcd-cluster-0 \
   --initial-cluster {% for host in ansible_play_batch -%}
-  {% if 'name' in hostvars[host] -%}
-    {{hostvars[host].name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
+  {% if 'etcd_node_name' in hostvars[host] -%}
+    {{hostvars[host].etcd_node_name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
   {%- endif %}
 {%- endfor %} \
   --initial-cluster-state new \

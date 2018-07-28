@@ -3,12 +3,17 @@
   gather_facts: no
   tasks:
 
+    - name: guess etcd node name
+      set_fact:
+        etcd_node_name: '{{ etcd_node_name | default(name) | default("etcd-" + ansible_play_batch.index(inventory_hostname)|string) }}'
+
     - name: configure cluster settings for makefile
       delegate_to: localhost
       run_once: yes
       copy: 
         content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
         dest: '{{playbook_dir}}/target/cluster_hosts'
+        force: yes
 
     - name: ensure directories exist
       file: 
@@ -35,7 +40,7 @@
 
       - name: copy certificates
         copy: 
-          src:  '{{playbook_dir}}/target/cert/{{item}}'
+          src:  '{{playbook_dir}}/target/cert/system/{{item}}'
           dest: '/etc/etcd/{{item}}'
           backup: yes
         with_items: *cert_files
@@ -77,7 +82,7 @@
     - name: check cluster status
       block:
       - pause: 
-          seconds: 3
+          seconds: 5
           prompt: etcd cluster is started, wait a bit till it's up
       - shell: >
           ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
@@ -86,3 +91,18 @@
         register: etcdctl
       - debug:
           msg: '{{etcdctl.stdout}}'
+      - fail:
+          msg: error
+        when: etcdctl.stdout.find('started') == -1
+        
+    
+    - name: save etcd hosts for future reference
+      delegate_to: localhost
+      run_once: yes
+      copy: 
+        content: "{%- set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' -%}
+          {%- for host in ansible_play_batch -%}
+            {{protocol}}://{{host}}:2380{%- if not loop.last -%},{%- endif -%}
+          {%- endfor -%}"
+        dest: '{{playbook_dir}}/target/etcd_hosts'
+        force: yes
