@@ -4,27 +4,27 @@
   tasks:
 
     - stat:
-        path: '{{playbook_dir}}/target/etcd_hosts'
+        path: '{{target|default(playbook_dir + "/target")}}/etcd_hosts'
       delegate_to: localhost
       run_once: yes
-      register: etcd_hosts_stats
+      register: etcd_hosts
 
     - fail:
-        msg: '{{playbook_dir}}/target/etcd_hosts should exist'
+        msg: '{{target|default(playbook_dir + "/target")}}/etcd_hosts should exist'
       delegate_to: localhost
       run_once: yes
-      when: not etcd_hosts_stats.exists
+      when: not etcd_hosts.stat.exists
 
     - name: guess controller name
       set_fact:
-        k8s_controller_name: '{{ k8s_controller_name | default(name) | default("controller-" + str(ansible_play_batch.index(inventory_hostname))) }}'
+        k8s_controller_name: '{{ k8s_controller_name | default(name) | default("controller-" + ansible_play_batch.index(inventory_hostname)|string) }}'
 
     - name: configure cluster settings for makefile
       delegate_to: localhost
       run_once: yes
       copy: 
         content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
-        dest: '{{playbook_dir}}/target/cluster_hosts'
+        dest: '{{target|default(playbook_dir + "/target")}}/cluster_hosts'
         force: yes
 
     - name: ensure directories
@@ -64,18 +64,28 @@
 
       - name: copy certificates
         copy: 
-          src:  '{{playbook_dir}}/target/cert/system/{{item}}'
+          src:  '{{target|default(playbook_dir + "/target")}}/cert/system/{{item}}'
           dest: '/var/lib/kubernetes/{{item}}'
           backup: yes
         with_items: *cert_file_names
+
+    - name: encryption-config
+      delegate_to: localhost
+      run_once: yes
+      template: 
+        src:  '{{playbook_dir}}/src/config/encryption-config.yaml.j2'
+        dest: '{{target|default(playbook_dir + "/target")}}/encryption-config.yaml'
+
+    - name: copy encryption config
+      copy:
+        src: '{{target|default(playbook_dir + "/target")}}/encryption-config.yaml'
+        dest: '/var/lib/kubernetes/encryption-config.yaml'
 
     - name: kube-scheduler config
       template: 
         src:  '{{playbook_dir}}/src/config/kube-scheduler.yaml'
         dest: /etc/kubernetes/config/kube-scheduler.yaml
 
-    # let us have no encryption
-    # todo: https://github.com/kelseyhightower/kubernetes-the-hard-way/blob/master/docs/06-data-encryption-keys.md
 
     - name: binaries
       block:
@@ -93,7 +103,7 @@
 
       - name: copy binaries
         copy:
-          src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
+          src:  '{{target|default(playbook_dir + "/target")}}/lib/linux/arm/{{item}}'
           dest: '/usr/local/bin/{{item}}'
           mode: '+x'
         with_items: *kube-apps
@@ -115,7 +125,7 @@
 
         - shell: >
                 kubectl config set-credentials {{item.id}}
-                --client-certificate=/var/lib/kubernetes/ca.pem
+                --client-certificate=/var/lib/kubernetes/{{item.id}}.pem
                 --client-key=/var/lib/kubernetes/{{item.id}}-key.pem
                 --embed-certs=true
                 --kubeconfig=/var/lib/kubernetes/{{item.id}}.kubeconfig
@@ -136,11 +146,11 @@
 
     - name: rbac role definitions
       copy:
-        src: '{{playbook_dir}}/src/config/{{item}}'
-        dest: '/etc/kubernetes/config/{{item}}'
+        src: '{{playbook_dir}}/src/config/{{item}}.yaml'
+        dest: '/etc/kubernetes/config/{{item}}.yaml'
       with_items:
-        - rbac-role.yaml
-        - rbac-binding.yaml
+        - rbac-role
+        - rbac-binding
 
     - name: copy kube-scheduler config
       copy: 
@@ -164,7 +174,7 @@
       - name: start systemd services
         systemd:
           daemon_reload: yes
-          name: etcd
+          name: '{{item}}'
           enabled: yes
           state: restarted
           masked: no

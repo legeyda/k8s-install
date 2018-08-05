@@ -3,6 +3,8 @@
 Description=Kubernetes API Server
 Documentation=https://github.com/kubernetes/kubernetes
 
+
+# --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota
 [Service]
 ExecStart=/usr/local/bin/kube-apiserver \
   --advertise-address={{inventory_hostname}} \
@@ -15,16 +17,15 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --authorization-mode=Node,RBAC \
   --bind-address=0.0.0.0 \
   --client-ca-file=/var/lib/kubernetes/ca.pem \
-  --enable-admission-plugins=Initializers,NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
   --enable-swagger-ui=true \
-{% if is_cluster_secure|default(True)|bool %}  
+{% if is_cluster_secure|default(True)|bool %}
   --etcd-cafile=/var/lib/kubernetes/ca.pem \
   --etcd-certfile=/var/lib/kubernetes/kubernetes.pem \
   --etcd-keyfile=/var/lib/kubernetes/kubernetes-key.pem \
 {% endif %}
   --etcd-servers={% for host in groups[etcd_group_name | default('etcd-nodes')] | default(ansible_play_batch) -%}
   {% if 'name' in hostvars[host] -%}
-    {{hostvars[host].name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
+    {{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
   {%- endif %}
 {%- endfor %} \
   --event-ttl=1h \
@@ -39,7 +40,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=/var/lib/kubernetes/kubernetes.pem \
   --tls-private-key-file=/var/lib/kubernetes/kubernetes-key.pem \
-  --v=2
+  --v=99
 Restart=on-failure
 RestartSec=5
 

@@ -243,3 +243,8 @@ ${target_kubeconfig}/remote/%.kubeconfig: ${target_cert_system}/ca.pem ${target_
 
 	kubectl config use-context default --kubeconfig=$@
 
+
+
+
+target/encryption-key:
+	head -c 32 /dev/urandom | base64 | tr -d '\n' > '$@'

@@ -12,7 +12,7 @@
       run_once: yes
       copy: 
         content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
-        dest: '{{playbook_dir}}/target/cluster_hosts'
+        dest: '{{target|default(playbook_dir + "/target")}}/cluster_hosts'
         force: yes
 
     - name: ensure directories exist
@@ -40,7 +40,7 @@
 
       - name: copy certificates
         copy: 
-          src:  '{{playbook_dir}}/target/cert/system/{{item}}'
+          src:  '{{target|default(playbook_dir + "/target")}}/cert/system/{{item}}'
           dest: '/etc/etcd/{{item}}'
           backup: yes
         with_items: *cert_files
@@ -59,7 +59,7 @@
 
       - name: install etcd binaries
         copy: 
-          src:  '{{playbook_dir}}/target/lib/linux/arm/{{item}}'
+          src:  '{{target|default(playbook_dir + "/target")}}/lib/linux/arm/{{item}}'
           dest: '/usr/local/bin/{{item}}'
           mode: '+x'
         with_items: *binary_names
@@ -95,7 +95,8 @@
           msg: error
         when: etcdctl.stdout.find('started') == -1
         
-    
+
+   
     - name: save etcd hosts for future reference
       delegate_to: localhost
       run_once: yes
@@ -104,5 +105,5 @@
           {%- for host in ansible_play_batch -%}
             {{protocol}}://{{host}}:2380{%- if not loop.last -%},{%- endif -%}
           {%- endfor -%}"
-        dest: '{{playbook_dir}}/target/etcd_hosts'
+        dest: '{{target|default(playbook_dir + "/target")}}/etcd_hosts'
         force: yes
