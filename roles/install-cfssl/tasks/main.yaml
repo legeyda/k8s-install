@@ -1,0 +1,20 @@
+---
+- name: install cfssl binaries on remote host
+  when: cfssl_installed_remotely|default(False) == False
+  block: 
+
+    - name: make remote directories for cfssl binaries
+      file: { path: '/opt/bin', state: directory, recurse: yes }
+
+    - name: download cloudflare binaries remotely
+      get_url:
+        url: 'https://pkg.cfssl.org/R1.2/{{item}}_linux-amd64'
+        dest: '/opt/bin/{{item}}'
+        mode: ugo+x
+      with_items:
+        - cfssl
+        - cfssljson
+        
+    - name: keep from running multiple times
+      set_fact: 
+        cfssl_installed_remotely: True

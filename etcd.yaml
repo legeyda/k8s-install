@@ -1,109 +1,175 @@
 ---
-- hosts: etcd-nodes
-  gather_facts: no
+- hosts: "{{etcd_hosts|default(hosts)}}"
+  become: yes
+  roles:
+    - local-ca
+    - add-etc-hosts
+    - install-etcd
   tasks:
 
     - name: guess etcd node name
       set_fact:
-        etcd_node_name: '{{ etcd_node_name | default(name) | default("etcd-" + ansible_play_batch.index(inventory_hostname)|string) }}'
-
-    - name: configure cluster settings for makefile
-      delegate_to: localhost
-      run_once: yes
-      copy: 
-        content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
-        dest: '{{target|default(playbook_dir + "/target")}}/cluster_hosts'
-        force: yes
-
-    - name: ensure directories exist
-      file: 
-        path: '{{item}}'
-        state: directory
-      with_items:
-        - /etc/etcd
-        - /var/lib/etcd
-
-    - name: certificates
-      when: is_cluster_secure | default(True) | bool
+        etcd_node_name: '{{ etcd_node_name | default(name) | default("node" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
+              
+    - name: configure etcd
       block:
 
-      - name: ensure certificates are generated
-        run_once: yes
-        delegate_to: localhost
-        make:  
-          chdir: '{{playbook_dir}}'
-          target: 'target/cert/system/{{item}}'
-        with_items: &cert_files
-          - ca.pem 
-          - kubernetes.pem
-          - kubernetes-key.pem
+        - name: ensure directories exist
+          become: yes
+          file: 
+            path: '{{item}}'
+            state: directory
+            recurse: yes
+          with_items:
+            - /var/lib/etcd
+            - /etc/etcd/cert/ca
 
-      - name: copy certificates
-        copy: 
-          src:  '{{target|default(playbook_dir + "/target")}}/cert/system/{{item}}'
-          dest: '/etc/etcd/{{item}}'
-          backup: yes
-        with_items: *cert_files
+        - name: copy ca
+          copy:
+            src: '{{playbook_dir}}/target/cert/ca/cert.pem'
+            dest: /etc/etcd/cert/ca
 
-    - name: binaries
-      block:
-      - name: ensure etcd for armv7 is built
-        delegate_to: localhost
-        run_once: yes
-        make:    
-          chdir: '{{playbook_dir}}'
-          target: target/lib/linux/arm/{{item}}
-        with_items: &binary_names
-          - etcd
-          - etcdctl
+        - name: generate certs
+          include_role:
+            name: gen-cert
+          vars:
+            cert_dir: '/etc/etcd/cert/{{cert_bearer}}'
+            #local_config_template: '{{playbook_dir}}/src/cert/ca/config.json'
+            #local_csr_template: '{{playbook_dir}}/src/cert/ca/csr.json'
+            common_name: 'etcd-{{cert_bearer}}'
+          loop: ['server', 'peer', 'client']
+          loop_control: {loop_var: cert_bearer}
 
-      - name: install etcd binaries
-        copy: 
-          src:  '{{target|default(playbook_dir + "/target")}}/lib/linux/arm/{{item}}'
-          dest: '/usr/local/bin/{{item}}'
-          mode: '+x'
-        with_items: *binary_names
+        - name: create systemd service
+          template: 
+            src:  '{{playbook_dir}}/src/etcd/etcd.service.j2'
+            dest: '/etc/systemd/system/etcd.service'
+            mode: 644
 
-    - name: create systemd service
-      template: 
-        src:  '{{playbook_dir}}/src/systemd/etcd.service.j2'
-        dest: '/etc/systemd/system/etcd.service'
-        mode: 644
+        - name: create etcd systemd service
+          template: 
+            src:  '{{playbook_dir}}/src/etcd/etcd.service.j2'
+            dest: '/etc/systemd/system/etcd.service'
+            mode: 644    
 
-    - name: enable systemd service
-      systemd:
-        daemon_reload: yes
-        name: etcd
-        enabled: yes
-        state: restarted
-        masked: no
+        - name: create etcd config file
+          template: 
+            src:  '{{playbook_dir}}/src/etcd/config.yaml.j2'
+            dest: '/etc/etcd/config.yaml'
+            mode: 644
+
+        - name: create etcdctl env file
+          template: 
+            src:  '{{playbook_dir}}/src/etcd/ctlenv.sh.j2'
+            dest: '/etc/etcd/ctlenv.sh'
+
+        - name: 'set default etcdctl environment'
+          lineinfile:
+              path: /etc/profile
+              line: . /etc/etcd/ctlenv.sh
+
+        - name: enable systemd service
+          systemd:
+            daemon_reload: yes
+            name: etcd
+            enabled: yes
+            state: restarted
+            masked: no
 
 
-    - name: check cluster status
-      block:
-      - pause: 
-          seconds: 5
-          prompt: etcd cluster is started, wait a bit till it's up
-      - shell: >
-          ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
-          /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379 
-          {% if is_cluster_secure|default(True)|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
-        register: etcdctl
-      - debug:
-          msg: '{{etcdctl.stdout}}'
-      - fail:
-          msg: error
-        when: etcdctl.stdout.find('started') == -1
+
+
+
+
+    # - name: install-etcd
+    #   include_role:
+    #     - 'githubixx.etcd'
+        
+
+
+
+
+
+    # - name: configure cluster settings for makefile
+    #   delegate_to: localhost
+    #   run_once: yes
+    #   copy: 
+    #     content: "{{ ','.join(groups[cluster_group_name | default('cluster')] | default(ansible_play_batch)) }}"
+    #     dest: '{{target|default(playbook_dir + "/target")}}/cluster_hosts'
+    #     force: yes
+
+
+    # - name: certificates
+    #   when: is_cluster_secure | default(True) | bool
+    #   block:
+
+    #   - name: ensure certificates are generated
+    #     run_once: yes
+    #     delegate_to: localhost
+    #     make:  
+    #       chdir: '{{playbook_dir}}'
+    #       target: 'target/cert/system/{{item}}'
+    #     with_items: &cert_files
+    #       - ca.pem 
+    #       - kubernetes.pem
+    #       - kubernetes-key.pem
+
+    #   - name: copy certificates
+    #     copy: 
+    #       src:  '{{target|default(playbook_dir + "/target")}}/cert/system/{{item}}'
+    #       dest: '/etc/etcd/{{item}}'
+    #       backup: yes
+    #     with_items: *cert_files
+
+    # - name: binaries
+    #   block:
+    #   - name: ensure etcd for armv7 is built
+    #     delegate_to: localhost
+    #     run_once: yes
+    #     make:    
+    #       chdir: '{{playbook_dir}}'
+    #       target: target/lib/linux/arm/{{item}}
+    #     with_items: &binary_names
+    #       - etcd
+    #       - etcdctl
+
+    #   - name: install etcd binaries
+    #     copy: 
+    #       src:  '{{target|default(playbook_dir + "/target")}}/lib/linux/arm/{{item}}'
+    #       dest: '/usr/local/bin/{{item}}'
+    #       mode: '+x'
+    #     with_items: *binary_names
+
+
+
+
+
+
+    # - name: check cluster status
+    #   block:
+    #   - pause: 
+    #       seconds: 5
+    #       prompt: etcd cluster is started, wait a bit till it's up
+    #   - shell: >
+    #       ETCDCTL_API=3 {% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
+    #       /usr/local/bin/etcdctl member list --endpoints={{protocol}}://127.0.0.1:2379 
+    #       {% if is_cluster_secure|default(True)|bool %}--cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem{% endif %}
+    #     register: etcdctl
+    #   - debug:
+    #       msg: '{{etcdctl.stdout}}'
+    #   - fail:
+    #       msg: error
+    #     when: etcdctl.stdout.find('started') == -1
         
 
    
-    - name: save etcd hosts for future reference
-      delegate_to: localhost
-      run_once: yes
-      copy: 
-        content: "{%- set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' -%}
-          {%- for host in ansible_play_batch -%}
-            {{protocol}}://{{host}}:2380{%- if not loop.last -%},{%- endif -%}
-          {%- endfor -%}"
-        dest: '{{target|default(playbook_dir + "/target")}}/etcd_hosts'
-        force: yes
+    # - name: save etcd hosts for future reference
+    #   delegate_to: localhost
+    #   run_once: yes
+    #   copy: 
+    #     content: "{%- set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' -%}
+    #       {%- for host in ansible_play_batch -%}
+    #         {{protocol}}://{{host}}:2380{%- if not loop.last -%},{%- endif -%}
+    #       {%- endfor -%}"
+    #     dest: '{{target|default(playbook_dir + "/target")}}/etcd_hosts'
+    #     force: yes

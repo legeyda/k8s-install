@@ -1,0 +1,4 @@
+#!/usr/bin/env bash
+
+. /etc/etcd/ctlenv.sh
+/opt/bin/etcdctl --endpoints=https://localhost:2379 "$@"

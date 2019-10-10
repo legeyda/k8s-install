@@ -1,0 +1,44 @@
+# https://github.com/etcd-io/etcd/blob/master/etcd.conf.yml.sample
+{% set protocol = 'https' if is_cluster_secure|default(True)|bool else 'http' %}
+
+
+data-dir: /opt/lib/etcd
+
+
+
+name: {{etcd_node_name}}
+initial-cluster-token: 'etcd-cluster'
+initial-cluster-state: 'new'
+
+
+initial-cluster: {% for host in ansible_play_hosts -%}
+  {% if 'etcd_node_name' in hostvars[host] -%}
+    {{hostvars[host].etcd_node_name}}={{protocol}}://{{host}}:2380{% if not loop.last %},{% endif %}
+  {%- endif %}
+{%- endfor %}
+
+initial-advertise-peer-urls: {{protocol}}://{{inventory_hostname}}:2380
+
+listen-peer-urls: {% for ip in ansible_all_ipv4_addresses -%}
+      {{protocol}}://{{ip}}:2380{% if not loop.last %},{% endif %}
+{%- endfor %}
+
+peer-transport-security:
+  cert-file: /etc/etcd/cert/peer/cert.pem
+  key-file:  /etc/etcd/cert/peer/cert-key.pem
+  client-cert-auth: true
+  trusted-ca-file:  /etc/etcd/cert/ca/cert.pem
+
+
+
+advertise-client-urls:  {{protocol}}://{{inventory_hostname}}:2379
+
+listen-client-urls: {{protocol}}://127.0.0.1:2379,{% for ip in ansible_all_ipv4_addresses -%}
+      {{protocol}}://{{ip}}:2379{% if not loop.last %},{% endif %}
+{%- endfor %}
+
+client-transport-security:
+  cert-file: /etc/etcd/cert/server/cert.pem
+  key-file:  /etc/etcd/cert/server/cert-key.pem
+  client-cert-auth: true
+  trusted-ca-file: /etc/etcd/cert/ca/cert.pem

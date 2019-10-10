@@ -1,0 +1,19 @@
+---
+- connection: local
+  delegate_to: localhost
+  run_once: yes
+  become: no
+  block:
+
+    - name: mkdir
+      file:
+        path: '{{playbook_dir}}/target/cert/ca'
+        state: directory
+        
+    - name: generate ca cert json
+      shell: 
+        cmd: >
+          target/bin/cfssl gencert -initca src/cert/ca/csr.json -config=src/cert/ca/config.json |
+          target/bin/cfssljson -bare target/cert/ca/cert
+        creates: target/cert/ca/cert-key.pem
+        chdir: '{{playbook_dir}}'

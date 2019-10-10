@@ -1,0 +1,38 @@
+- name: install etcd
+  become: yes
+  block:
+    - name: init temp download dir
+      file:
+        path:  '{{dir}}'
+        state: 'directory'
+      loop: 
+        - /tmp/download-etcd
+        - /opt/bin
+      loop_control: {loop_var: dir}
+      
+    - name: download targz
+      get_url:
+         url: 'https://github.com/etcd-io/etcd/releases/download/v3.4.0/etcd-v3.4.0-linux-amd64.tar.gz'
+         dest: /tmp/download-etcd/etcd-v3.4.0-linux-amd64.tar.gz
+
+    - name: extract
+      unarchive:
+        src: /tmp/download-etcd/etcd-v3.4.0-linux-amd64.tar.gz
+        dest: /tmp/download-etcd
+        remote_src: yes
+
+    - name: install
+      copy:
+        src: '/tmp/download-etcd/etcd-v3.4.0-linux-amd64/{{item}}'
+        dest: /opt/bin
+        remote_src: yes
+        mode: ugo+x
+      with_items:
+        - etcd
+        - etcdctl
+
+    - name: install etcctl wrapper with predefined options
+      template:
+        src: '{{playbook_dir}}/src/etcd/etcdctlwrap'
+        dest: /opt/bin/etcdctlwrap
+        mode: ugo+x

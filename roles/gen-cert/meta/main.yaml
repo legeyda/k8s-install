@@ -1,0 +1,3 @@
+dependencies:
+  - role: install-cfssl
+  - role: local-ca

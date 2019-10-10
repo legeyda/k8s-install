@@ -1,5 +1,5 @@
 {
-  "CN": "Kubernetes",
+  "CN": "k8s-ca",
   "key": {
     "algo": "rsa",
     "size": 2048
