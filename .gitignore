@@ -1,5 +1,2 @@
 target
 *.retry
-
-*.sublime-project
-*.sublime-workspace
