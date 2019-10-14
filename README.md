@@ -1,56 +1,26 @@
 
 
+Installing new etcd cluster
+--------------------------------
+
+	ansible-playbook etcd.yaml -e hosts=etcd-nodes
 
 
 
+Replacing failed etcd node
+--------------------------------
 
+Suppose node3 failed.
 
+1.	ssh to node1 and remove failed node from cluster:
 
-{% for host in hostvars -%}
-  {% if defined hostvars[host].name %}
-    {{hostvars[host].name}}=https://{{host}}{% if not loop.last %},{% endif %}
-  {% endif %}
-{%- endfor %}
+	sudo /opt/bin/etcdctlwrap member list
+	sudo /opt/bin/etcdctlwrap member remove <node 3 id discovered in the output of previous command>
 
-ETCDCTL_API=3 etcdctl member list --endpoints=https://127.0.0.1:2379 --cacert=/etc/etcd/ca.pem --cert=/etc/etcd/kubernetes.pem --key=/etc/etcd/kubernetes-key.pem
+2.	reinstall whole cluster with `initial_cluster_state=existing` option
+	
+	ansible-playbook etcd.yaml -e hosts=etcd-nodes -e initial_cluster_state=existing
 
+3.	ssh to node1 and add new node:
 
-
-
-
-
-
-ExecStart=/usr/local/bin/etcd \
-  --name {{name}} \
-  --cert-file /etc/etcd/kubernetes.pem \
-  --key-file /etc/etcd/kubernetes-key.pem \
-  --peer-cert-file /etc/etcd/kubernetes.pem \
-  --peer-key-file /etc/etcd/kubernetes-key.pem \
-  --trusted-ca-file /etc/etcd/ca.pem \
-  --peer-trusted-ca-file /etc/etcd/ca.pem \
-  --peer-client-cert-auth \
-  --client-cert-auth \
-  --initial-advertise-peer-urls https://{{inventory_hostname}}:2380 \
-  --listen-peer-urls https://{{inventory_hostname}}:2380 \
-  --listen-client-urls https://{{inventory_hostname}}:2379,https://127.0.0.1:2379 \
-  --advertise-client-urls https://{{inventory_hostname}}:2379 \
-  --initial-cluster-token etcd-cluster-0 \
-  --initial-cluster {{initial_cluster}} \
-  --initial-cluster-state new \
-  --data-dir /var/lib/etcd
-
-
-
-
-ETCDCTL_API=3 etcdctl member list --endpoints=http://127.0.0.1:2379
-
-
-
-
-
-
-02:81:96:99:BE:B0 10.0.0.101
-02:81:C9:20:D7:45 10.0.0.102
-02:81:1B:02:3D:91 10.0.0.103
-02:81:D4:12:79:12 10.0.0.104
-B8:27:EB:20:5A:29 10.0.0.106
+	sudo /opt/bin/etcdctlwrap member add node3 --peer-urls=https://node3:2380
