@@ -1,0 +1,42 @@
+[Unit]
+Description=Kubernetes API Server
+Documentation=https://github.com/kubernetes/kubernetes
+
+[Service]
+ExecStart=/usr/local/bin/kube-apiserver \
+  --advertise-address=127.0.0.1 \
+  --allow-privileged=true \
+  --apiserver-count=3 \
+  --audit-log-maxage=30 \
+  --audit-log-maxbackup=3 \
+  --audit-log-maxsize=100 \
+  --audit-log-path=/var/log/audit.log \
+  --authorization-mode=Node,RBAC \
+  --bind-address=0.0.0.0 \
+  --client-ca-file=/etc/k8s/cert/ca/cert.pem \
+  --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
+  --etcd-cafile=/etc/k8s/cert/ca/cert.pem \
+  --etcd-certfile=/etc/k8s/cert/k8s/cert.pem \
+  --etcd-keyfile=/etc/k8s/cert/k8s/cert-key.pem \
+  --etcd-servers=
+{%- for host in etcd_host_names|default(ansible_play_hosts) -%}
+  https://{{host}}:2379{% if not loop.last %},{% endif %}
+{%- endfor %}
+  --event-ttl=1h \
+  --encryption-provider-config=/etc/k8s/encryption-config.yaml \
+  --kubelet-certificate-authority=/etc/k8s/cert/ca/cert.pem \
+  --kubelet-client-certificate=/etc/k8s/cert/k8s/cert.pem \
+  --kubelet-client-key=/etc/k8s/cert/k8s/cert-key.pem \
+  --kubelet-https=true \
+  --runtime-config=api/all \
+  --service-account-key-file==/etc/k8s/cert/k8s/cert-key.pem \
+  --service-cluster-ip-range=10.32.0.0/24 \
+  --service-node-port-range=30000-32767 \
+  --tls-cert-file=/etc/k8s/cert/k8s/cert.pem \
+  --tls-private-key-file=/etc/k8s/cert/k8s/cert-key.pem \
+  --v=2
+Restart=on-failure
+RestartSec=5
+
+[Install]
+WantedBy=multi-user.target

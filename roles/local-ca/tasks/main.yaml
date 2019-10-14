@@ -5,15 +5,23 @@
   become: no
   block:
 
-    - name: mkdir
+    - name: ensure local dir for ca certificates exists
       file:
         path: '{{playbook_dir}}/target/cert/ca'
         state: directory
-        
+       
+    - name: generate config.json and csr.json for ca
+      template:
+        src:  '{{role_path}}/templates/{{item}}.json.j2'
+        dest: '{{playbook_dir}}/target/cert/ca/{{item}}.json'
+      with_items:
+        - config
+        - csr
+
     - name: generate ca cert json
       shell: 
         cmd: >
-          target/bin/cfssl gencert -initca src/cert/ca/csr.json -config=src/cert/ca/config.json |
-          target/bin/cfssljson -bare target/cert/ca/cert
-        creates: target/cert/ca/cert-key.pem
-        chdir: '{{playbook_dir}}'
+          bin/cfssl gencert -initca cert/ca/csr.json -config=cert/ca/config.json |
+          bin/cfssljson -bare cert/ca/cert
+        creates: cert/ca/cert-key.pem
+        chdir: '{{playbook_dir}}/target'

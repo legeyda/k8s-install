@@ -1,0 +1,11 @@
+- name: x
+  when: etcd_nodes is not defined
+  set_fact:  
+    etcd_nodes: >
+        {%- set etcd_nodes_from_play_hosts=ansible_play_hosts -%}
+        {{etcd_nodes|default(ansible_play_hosts)}}
+        {%- macro random_str(len) -%}
+          {%- for n in range(len) -%}
+            {{ [0,1,2,3,4,5,6,7,8,9]|random }}
+          {%- endfor -%}
+        {%- endmacro -%}

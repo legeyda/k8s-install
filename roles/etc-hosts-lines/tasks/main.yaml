@@ -1,0 +1,11 @@
+
+
+
+- name: "setting ip addresses of all hosts to each node's /etc/hosts"
+  become: yes
+  lineinfile:
+    path: /etc/hosts
+    line: '{{hostvars[item].ansible_default_ipv4.address}} {{item}} # for etcd cluster'
+  with_items: '{{ansible_play_hosts}}'
+
+

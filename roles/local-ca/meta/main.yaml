@@ -1,2 +1,2 @@
 dependencies:
-  - role: local-install-cfssl
+  - role: local-cfssl

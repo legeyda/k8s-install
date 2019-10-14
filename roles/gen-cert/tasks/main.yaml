@@ -9,12 +9,12 @@
 
     - name: 'upload cert config to {{cert_dir}}/config.json'
       template:
-        src: '{{ local_config_template | default(playbook_dir + "/src/cert/config.json.j2") }}'
+        src: '{{ config_template | default(role_path + "/templates/config.json.j2") }}'
         dest: '{{cert_dir}}/config.json'
 
     - name: 'update cert request {{cert_dir}}/csr.json'
       template: 
-        src:  '{{local_csr_template | default(playbook_dir + "/src/cert/csr.json.j2") }}'
+        src:  '{{csr_template | default(role_path + "/templates/csr.json.j2") }}'
         dest: '{{cert_dir}}/csr.json'
         mode: 644
 
@@ -54,7 +54,7 @@
         dest: '{{playbook_dir}}/target/fetch'
       register: fetch_result
 
-    - name: sign cert request locally with local ca
+    - name: sign cert request locally with ca private key
       delegate_to: localhost
       become: no
       shell: 
@@ -62,7 +62,7 @@
             {{playbook_dir}}/target/bin/cfssl sign \
                     -ca {{playbook_dir}}/target/cert/ca/cert.pem \
                     -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
-                    -config='{{playbook_dir}}/src/cert/ca/config.json' \
+                    -config='{{playbook_dir}}/target/cert/ca/config.json' \
                     -profile {{config_profile|default('default')}} \
                     -hostname {{cert_hostnames|default(['localhost', inventory_hostname])|select('defined')|join(',')}} \
                     {{fetch_result.dest}} | \

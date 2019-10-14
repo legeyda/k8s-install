@@ -1,0 +1,24 @@
+---
+- connection: local
+  when: cfssl_installed_locally|default(False) == False
+  delegate_to: localhost
+  delegate_facts: yes
+  run_once: yes
+  become: no
+  block:
+
+    - name: make local directories for cloudflare binaries and CA certificates
+      file: { path: '{{playbook_dir}}/target/bin', state: directory, recurse: yes }
+
+    - name: download cloudflare binaries locally
+      get_url:
+        url: 'https://pkg.cfssl.org/R1.2/{{item}}_linux-amd64'
+        dest: '{{playbook_dir}}/target/bin/{{item}}'
+        mode: ugo+x
+      with_items:
+        - cfssl
+        - cfssljson
+            
+    - name: keep from running multiple times
+      set_fact: 
+        cfssl_installed_locally: True

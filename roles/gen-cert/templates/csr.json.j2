@@ -1,0 +1,22 @@
+{
+  "CN": "{{common_name|default('bearer')}}",
+
+  "hosts": [
+{% for hostname in cert_hostnames|default(['localhost', inventory_hostname])|select('defined') %}
+    "{{hostname}}"{% if not loop.last %},{% endif %}
+{%- endfor %}
+  ],
+  "key": {
+    "algo": "rsa",
+    "size": 2048
+  },
+  "names": [
+    {
+      "C": "US",
+      "L": "Portland",
+      "O": "Kubernetes",
+      "OU": "CA",
+      "ST": "Oregon"
+    }
+  ]
+}

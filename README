@@ -1,0 +1,10 @@
+
+
+
+
+create new etcd cluster:
+	ansible-playbook etcd.yaml -e hosts=etcd-nodes
+
+replace failed etcd node (say, node3 failed and was replaced):
+	ansible-playbook etcd.yaml -e hosts=hosts -e initial_cluster_state=existing
+	node1#> /opt/bin/etcdctlwrap add member node3 https://node3:2380

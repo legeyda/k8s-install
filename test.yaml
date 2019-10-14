@@ -1,4 +1,4 @@
 ---
 - hosts: "{{hosts}}"
   roles:
-    - add-etc-hosts
+    - etc-hosts-lines

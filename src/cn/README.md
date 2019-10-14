@@ -1,1 +1,0 @@
-each file contains common name of entity in kubernetes
