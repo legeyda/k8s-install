@@ -1,0 +1,77 @@
+- name:
+  file:
+    path: '{{item}}'
+    state: directory
+  with_items:
+    - /etc/k8s/cert/ca
+    - /opt/bin
+
+- name: copy ca certificate
+  copy:
+    src: '{{playbook_dir}}/target/cert/ca/cert.pem'
+    dest: /etc/k8s/cert/ca/cert.pem
+
+- name: generate kubernetes cert
+  include_role:
+    name: gen-cert
+  vars:
+    cert_dir: '/etc/k8s/cert/k8s'
+    common_name: 'k8s'
+
+
+
+
+- name: 'generate kube config for {{item}}'
+  include_role:
+    name: kubeconfig
+  vars:
+    client_name: '{{item}}'
+  with_items: &binaries
+    - kube-apiserver
+    - kube-controller-manager
+    - kube-scheduler 
+
+- name: download kube-apiserver binary distribution
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{item}}'
+    dest: '/opt/bin/{{item}}'
+    mode: ugo+x
+  with_items: *binaries
+
+- name: create etcd systemd service
+  template: 
+    src:  '{{role_path}}/templates/{{item}}.service.j2'
+    dest: '/etc/systemd/system/{{item}}.service'
+    mode: 644
+  with_items: *binaries
+
+- name: enable systemd service
+  systemd:
+    daemon_reload: yes
+    name: '{{item}}'
+    enabled: yes
+    state: restarted
+    masked: no
+  with_items: *binaries
+
+
+
+
+
+- name: 'generate kube config for kubeconfig'
+  include_role:
+    name: kubeconfig
+  vars:
+    client_name: admin
+
+- name: create k8s encryption config
+  template:
+    src: '{{role_path}}/templates/encryption-config.yaml.j2'
+    dest: /etc/k8s/encryption-config.yaml
+    force: no
+
+- name: create kube kube-scheduler config
+  template:
+    src: '{{role_path}}/templates/kube-scheduler.yaml.j2'
+    dest: /etc/k8s/kube-scheduler.yaml.yaml
+    force: no

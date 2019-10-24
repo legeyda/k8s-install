@@ -4,7 +4,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
 ExecStart=/usr/local/bin/kube-apiserver \
-  --advertise-address=127.0.0.1 \
+  --advertise-address={{inventory_hostname}} \
   --allow-privileged=true \
   --apiserver-count=3 \
   --audit-log-maxage=30 \
@@ -19,7 +19,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --etcd-certfile=/etc/k8s/cert/k8s/cert.pem \
   --etcd-keyfile=/etc/k8s/cert/k8s/cert-key.pem \
   --etcd-servers=
-{%- for host in etcd_host_names|default(ansible_play_hosts) -%}
+{%- for host in etcd_hosts|default(ansible_play_hosts) -%}
   https://{{host}}:2379{% if not loop.last %},{% endif %}
 {%- endfor %}
   --event-ttl=1h \
