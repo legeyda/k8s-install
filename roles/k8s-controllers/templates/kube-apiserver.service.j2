@@ -3,8 +3,8 @@ Description=Kubernetes API Server
 Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
-ExecStart=/usr/local/bin/kube-apiserver \
-  --advertise-address={{inventory_hostname}} \
+ExecStart=/opt/bin/kube-apiserver \
+  --advertise-address={{hostvars[inventory_hostname].ansible_default_ipv4.address}} \
   --allow-privileged=true \
   --apiserver-count=3 \
   --audit-log-maxage=30 \
@@ -29,7 +29,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --kubelet-client-key=/etc/k8s/cert/k8s/cert-key.pem \
   --kubelet-https=true \
   --runtime-config=api/all \
-  --service-account-key-file==/etc/k8s/cert/k8s/cert-key.pem \
+  --service-account-key-file=/etc/k8s/cert/k8s/cert-key.pem \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=/etc/k8s/cert/k8s/cert.pem \

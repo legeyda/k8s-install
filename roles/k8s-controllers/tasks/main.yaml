@@ -65,13 +65,22 @@
     client_name: admin
 
 - name: create k8s encryption config
+  become: no
+  delegate_to: localhost
+  run_once: yes
   template:
     src: '{{role_path}}/templates/encryption-config.yaml.j2'
-    dest: /etc/k8s/encryption-config.yaml
+    dest: '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
     force: no
+
+- name: distcibute k8s encryption config
+  copy:
+    src:  '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
+    dest: /etc/k8s/encryption-config.yaml
+
 
 - name: create kube kube-scheduler config
   template:
     src: '{{role_path}}/templates/kube-scheduler.yaml.j2'
-    dest: /etc/k8s/kube-scheduler.yaml.yaml
+    dest: /etc/k8s/kube-scheduler.yaml
     force: no

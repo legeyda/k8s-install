@@ -1,6 +1,6 @@
 # todo command argv
 
-- name: 'set-cluster for {{client_name}}'
+- name: 'set-cluster (1/4) for {{client_name}}'
   command: >
       /opt/bin/kubectl 
       config 
@@ -11,7 +11,7 @@
       '--server=https://localhost:6443'
       '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
 
-- name: 'set-credentials for {{client_name}}'
+- name: 'set-credentials (2/4) for {{client_name}}'
   command: >
       /opt/bin/kubectl 
       config 
@@ -22,7 +22,7 @@
       --embed-certs=true
       '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
 
-- name: 'set-context for {{client_name}}'
+- name: 'set-context (3/4) for {{client_name}}'
   command: >
       /opt/bin/kubectl 
       config 
@@ -32,7 +32,7 @@
       '--user={{client_name}}'
       '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
 
-- name: 'use-context for {{client_name}}'
+- name: 'use-context (4/4) for {{client_name}}'
   command: >
       /opt/bin/kubectl 
       config
