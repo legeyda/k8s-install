@@ -35,9 +35,7 @@
       file: {path: '{{playbook_dir}}/target/fetch', state: directory, recurse: yes}
 
     - name: make remote directories
-      file: { path: '{{item}}', state: directory, recurse: yes }
-      with_items:
-        - /opt/bin
+      file: { path: '/opt/bin', state: directory, recurse: yes }
 
     - name: download cloudflare binaries remotely
       get_url:

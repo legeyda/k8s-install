@@ -8,7 +8,7 @@ For now etcd bootstraping is working.
 Installing new etcd cluster
 --------------------------------
 
-	ansible-playbook etcd.yaml -e hosts=etcd-nodes
+	ansible-playbook etcd.yaml -e target_hosts=k8s-hosts
 
 
 
@@ -24,7 +24,7 @@ Suppose node3 failed.
 
 2.	reinstall whole cluster with `initial_cluster_state=existing` option
 		
-		ansible-playbook etcd.yaml -e hosts=etcd-nodes -e initial_cluster_state=existing
+		ansible-playbook etcd.yaml -e target_hosts=k8s-hosts -e initial_cluster_state=existing
 
 3.	ssh to node1 and add new node:
 

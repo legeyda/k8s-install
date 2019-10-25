@@ -2,41 +2,41 @@
 
 - name: 'set-cluster (1/4) for {{client_name}}'
   command: >
-      /opt/bin/kubectl 
+      /opt/bin/kubectl
       config 
       set-cluster
       '{{k8s_cluster_name|default(cluster_name)|default("k8s-cluster")}}'
       '--certificate-authority={{ca_cert|default("/etc/k8s/cert/ca/cert.pem")}}'
       --embed-certs=true
       '--server=https://localhost:6443'
-      '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
+      '--kubeconfig=/etc/k8s/{{file_name|default(client_name)}}.kubeconfig'
 
 - name: 'set-credentials (2/4) for {{client_name}}'
   command: >
-      /opt/bin/kubectl 
+      /opt/bin/kubectl
       config 
       set-credentials
       '{{client_name}}'
-      '--client-certificate={{client_cert|default("/etc/k8s/cert/k8s/cert.pem")}}'
-      '--client-key={{client_key|default("/etc/k8s/cert/k8s/cert-key.pem")}}'
+      '--client-certificate={{client_cert|default(client_cert_dir|default("/etc/k8s/cert/"+client_name) + "/cert.pem")}}'
+      '--client-key={{client_key|default(client_cert_dir|default("/etc/k8s/cert/"+client_name) + "/cert-key.pem")}}'
       --embed-certs=true
-      '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
+      '--kubeconfig=/etc/k8s/{{file_name|default(client_name)}}.kubeconfig'
 
 - name: 'set-context (3/4) for {{client_name}}'
   command: >
-      /opt/bin/kubectl 
-      config 
+      /opt/bin/kubectl
+      config
       set-context
       default
-      --cluster=kubernetes-the-hard-way
+      '--cluster={{k8s_cluster_name|default(cluster_name)|default("k8s-cluster")}}'
       '--user={{client_name}}'
-      '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
+      '--kubeconfig=/etc/k8s/{{file_name|default(client_name)}}.kubeconfig'
 
 - name: 'use-context (4/4) for {{client_name}}'
   command: >
-      /opt/bin/kubectl 
+      /opt/bin/kubectl
       config
-      use-context 
+      use-context
       default
-      '--kubeconfig=/etc/k8s/{{client_type|default(client_name)}}.kubeconfig'
+      '--kubeconfig=/etc/k8s/{{file_name|default(client_name)}}.kubeconfig'
 
