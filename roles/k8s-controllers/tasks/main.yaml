@@ -1,106 +1,75 @@
-- name:
-  file:
-    path: '{{item}}'
-    state: directory
-  with_items:
-    - /etc/k8s/cert/ca
-    - /opt/bin
+- become: yes
+  block:
+    - name:
+      file:
+        path: '{{item}}'
+        state: directory
+      with_items:
+        - /etc/k8s/cert/ca
 
-- name: copy ca certificate
-  copy:
-    src: '{{playbook_dir}}/target/cert/ca/cert.pem'
-    dest: /etc/k8s/cert/ca/cert.pem
-
-
-
-
-- name: create k8s encryption config
-  become: no
-  delegate_to: localhost
-  run_once: yes
-  template:
-    src: '{{role_path}}/templates/encryption-config.yaml.j2'
-    dest: '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
-    force: no
-
-- name: distribute k8s encryption config
-  copy:
-    src:  '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
-    dest: /etc/k8s/encryption-config.yaml
+    - name: copy ca certificate
+      copy:
+        src: '{{playbook_dir}}/target/cert/ca/cert.pem'
+        dest: /etc/k8s/cert/ca/cert.pem
 
 
 
 
+    - name: create k8s encryption config
+      become: no
+      delegate_to: localhost
+      run_once: yes
+      template:
+        src: '{{role_path}}/templates/encryption-config.yaml.j2'
+        dest: '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
+        force: no
 
-- name: create kube kube-scheduler config
-  template:
-    src: '{{role_path}}/templates/kube-scheduler.yaml.j2'
-    dest: /etc/k8s/kube-scheduler.yaml
-    force: no
-
-
-
-- name: generate kubernetes cert
-  include_role:
-    name: gen-cert
-  vars:
-    cert_dir: '/etc/k8s/cert/{{item}}'
-    common_name: '{{item}}'
-  with_items: &binaries
-    - kube-apiserver
-    - kube-controller-manager
-    - kube-scheduler 
-
-- name: 'generate kube config for {{item}}'
-  include_role:
-    name: kubeconfig
-  vars:
-    client_name: '{{item}}'
-    client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
-    client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
-  with_items: *binaries
-
-- name: download kube-apiserver binary distribution
-  get_url:
-    url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{item}}'
-    dest: '/opt/bin/{{item}}'
-    mode: ugo+x
-  with_items: *binaries
-
-- name: create systemd service
-  template: 
-    src:  '{{role_path}}/templates/{{item}}.service.j2'
-    dest: '/etc/systemd/system/{{item}}.service'
-    mode: 644
-  with_items: *binaries
-
-- name: enable systemd service
-  systemd:
-    daemon_reload: yes
-    name: '{{item}}'
-    enabled: yes
-    state: restarted
-    masked: no
-  with_items: *binaries
+    - name: distribute k8s encryption config
+      copy:
+        src:  '{{local_target_dir|default(playbook_dir + "/target")}}/encryption-config.yaml'
+        dest: /etc/k8s/encryption-config.yaml
 
 
 
 
-- name: generate cert for admin
-  include_role:
-    name: gen-cert
-  vars:
-    cert_dir: '/etc/k8s/cert/admin'
-    common_name: 'admin'
-    organization: 'system:masters'
 
-- name: 'generate kube config for admin'
-  include_role:
-    name: kubeconfig
-  vars:
-    client_name: admin
-    client_cert: /etc/k8s/cert/admin/cert.pem
-    client_key: /etc/k8s/cert/admin/cert-key.pem
+    - name: create kube kube-scheduler config
+      template:
+        src: '{{role_path}}/templates/kube-scheduler.yaml.j2'
+        dest: /etc/k8s/kube-scheduler.yaml
+        force: no
+
+
+
+
+    - name: configure admin
+      block:
+        - name: generate cert for admin
+          include_role:
+            name: gen-cert
+          vars:
+            cert_dir: '/etc/k8s/cert/admin'
+            common_name: 'admin'
+            organization: 'system:masters'
+
+        - name: 'generate kube config for admin'
+          include_role:
+            name: kubeconfig
+          vars:
+            client_name: admin
+            client_cert: /etc/k8s/cert/admin/cert.pem
+            client_key: /etc/k8s/cert/admin/cert-key.pem
+
+
+    - name: configure service account certificate
+      block:
+        - name: generate cert for service account
+          include_role:
+            name: gen-cert
+          vars:
+            cert_dir: '/etc/k8s/cert/service-account'
+            common_name: 'service-accounts'
+            organization: 'kubernetes'
 
 
 
@@ -108,4 +77,72 @@
 
 
 
+    - name: generate kubernetes cert
+      include_role:
+        name: gen-cert
+      vars:
+        cert_dir: '/etc/k8s/cert/{{item}}'
+        common_name: 'system:{{item}}'
+        organization: 'system:{{item}}'
+      with_items: &binaries
+        - kube-apiserver
+        - kube-controller-manager
+        - kube-scheduler 
 
+    - name: 'generate kube config for {{item}}'
+      include_role:
+        name: kubeconfig
+      vars:
+        client_name: '{{item}}'
+        client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
+        client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
+      with_items: *binaries
+
+    - name: download kube-apiserver binary distribution
+      get_url:
+        url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{item}}'
+        dest: '/opt/bin/{{item}}'
+        mode: ugo+x
+      with_items: *binaries
+
+    - name: create systemd service
+      template: 
+        src:  '{{role_path}}/templates/{{item}}.service.j2'
+        dest: '/etc/systemd/system/{{item}}.service'
+        mode: 644
+      with_items: *binaries
+
+    - name: enable systemd service
+      systemd:
+        daemon_reload: yes
+        name: '{{item}}'
+        enabled: yes
+        state: restarted
+        masked: no
+      with_items: *binaries
+
+
+
+
+
+
+
+
+
+
+
+
+    - name: wait till kube-apiserver is up
+      pause:
+        minutes: 2
+
+    - set_fact:
+        this_role_path: '{{role_path}}'
+
+    - include_role:
+        name: kubectl-apply
+      vars:
+        config_template: '{{this_role_path}}/templates/{{item}}.yml.j2'
+      with_items:
+        - create-role
+        - bind-role

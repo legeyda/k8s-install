@@ -1,10 +1,12 @@
-- name: 'ensure directory {{binary_dir}} exists'
-  file:
-    path:  '{{binary_dir}}'
-    state: 'directory'
+- name: 'ensure directory {{binary_dir}} exists and in the PATH'
+  block:
+    - name: 'ensure directory {{binary_dir}} exists'
+      file:
+        path:  '{{binary_dir}}'
+        state: 'directory'
 
-- name: 'add {{binary_dir}} to PATH permanently'
-  lineinfile:
-      path: /etc/profile
-      line: 'PATH="$PATH:{{binary_dir}}"'
+    - name: 'add {{binary_dir}} to PATH permanently'
+      lineinfile:
+          path: '{{ansible_env.HOME}}/.profile'
+          line: 'PATH="$PATH:{{binary_dir}}"'
 

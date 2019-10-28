@@ -2,6 +2,5 @@
 - hosts: '{{target_hosts}}'
   become: yes
   roles:
-    - local-ca
     - etc-hosts-lines
     - etcd

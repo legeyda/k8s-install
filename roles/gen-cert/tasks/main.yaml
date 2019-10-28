@@ -1,70 +1,61 @@
 
-- name: generate cert request on remote
+- name: generate remote certifiicate signed with local ca
   block:
-    - name: ensure remote dir exists
-      file: 
-        path: '{{cert_dir}}'
-        state: directory
-        recurse: yes
 
-    - name: 'upload cert config to {{cert_dir}}/config.json'
-      template:
-        src: '{{ config_template | default(role_path + "/templates/config.json.j2") }}'
-        dest: '{{cert_dir}}/config.json'
+    - name: generate cert request on remote
+      block:
+        - name: ensure remote dir exists
+          file: 
+            path: '{{cert_dir}}'
+            state: directory
+            recurse: yes
 
-    - name: 'update cert request {{cert_dir}}/csr.json'
-      template: 
-        src:  '{{csr_template | default(role_path + "/templates/csr.json.j2") }}'
-        dest: '{{cert_dir}}/csr.json'
-        mode: 644
+        - name: 'upload cert config to {{cert_dir}}/config.json'
+          template:
+            src: '{{ config_template | default(role_path + "/templates/config.json.j2") }}'
+            dest: '{{cert_dir}}/config.json'
 
-    - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
-      shell: 
-        cmd: >
-            /opt/bin/cfssl gencert -initca {{cert_dir}}/csr.json -config={{cert_dir}}/config.json |
-            /opt/bin/cfssljson -bare {{cert_dir}}/cert
-        chdir: '{{cert_dir}}'
+        - name: 'update cert request {{cert_dir}}/csr.json'
+          template: 
+            src:  '{{csr_template | default(role_path + "/templates/csr.json.j2") }}'
+            dest: '{{cert_dir}}/csr.json'
+            mode: 644
+
+        - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
+          shell: 
+            cmd: >
+                /opt/bin/cfssl gencert -initca {{cert_dir}}/csr.json -config={{cert_dir}}/config.json |
+                /opt/bin/cfssljson -bare {{cert_dir}}/cert
+            chdir: '{{cert_dir}}'
 
 
-- name: fetch and sign cert request with local ca, and send back to remote
-  block:
-    - name: make local directories
-      delegate_to: localhost
-      run_once: yes
-      become: no
-      file: {path: '{{playbook_dir}}/target/fetch', state: directory, recurse: yes}
+    - name: fetch and sign cert request with local ca
+      block:
+        - name: make local directories
+          delegate_to: localhost
+          run_once: yes
+          become: no
+          file: {path: '{{playbook_dir}}/target/fetch', state: directory, recurse: yes}
 
-    - name: make remote directories
-      file: { path: '/opt/bin', state: directory, recurse: yes }
+        - name: fetch cert request for local signing
+          fetch:
+            src: '{{cert_dir}}/cert.csr'
+            dest: '{{playbook_dir}}/target/fetch'
+          register: fetch_result
 
-    - name: download cloudflare binaries remotely
-      get_url:
-        url: 'https://pkg.cfssl.org/R1.2/{{item}}_linux-amd64'
-        dest: '/opt/bin/{{item}}'
-        mode: ugo+x
-      with_items:
-        - cfssl
-        - cfssljson
-
-    - name: fetch cert request for local signing
-      fetch:
-        src: '{{cert_dir}}/cert.csr'
-        dest: '{{playbook_dir}}/target/fetch'
-      register: fetch_result
-
-    - name: sign cert request locally with ca private key
-      delegate_to: localhost
-      become: no
-      shell: 
-        cmd: >
-            {{playbook_dir}}/target/bin/cfssl sign \
-                    -ca {{playbook_dir}}/target/cert/ca/cert.pem \
-                    -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
-                    -config='{{playbook_dir}}/target/cert/ca/config.json' \
-                    -profile {{config_profile|default('default')}} \
-                    -hostname {{cert_hostnames|default(['localhost', inventory_hostname])|select('defined')|join(',')}} \
-                    {{fetch_result.dest}} | \
-            {{playbook_dir}}/target/bin/cfssljson -bare {{fetch_result.dest|dirname}}/{{fetch_result.dest|basename|splitext|first}}
+        - name: sign cert request locally with ca private key
+          delegate_to: localhost
+          become: no
+          shell: 
+            cmd: >
+                {{playbook_dir}}/target/bin/cfssl sign \
+                        -ca {{playbook_dir}}/target/cert/ca/cert.pem \
+                        -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
+                        -config='{{playbook_dir}}/target/cert/ca/config.json' \
+                        -profile {{config_profile|default('default')}} \
+                        -hostname {{cert_hostnames|default(['localhost', inventory_hostname])|select('defined')|join(',')}} \
+                        {{fetch_result.dest}} | \
+                {{playbook_dir}}/target/bin/cfssljson -bare {{fetch_result.dest|dirname}}/{{fetch_result.dest|basename|splitext|first}}
 
     - name: copy back to remote signed certificate for {{cert_dir}}
       copy:

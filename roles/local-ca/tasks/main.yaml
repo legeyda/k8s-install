@@ -1,8 +1,10 @@
 ---
 - connection: local
   delegate_to: localhost
+  delegate_facts: yes
   run_once: yes
   become: no
+  when: central_authority_configured_locally|default(False) == False
   block:
 
     - name: ensure local dir for ca certificates exists
@@ -25,3 +27,6 @@
           bin/cfssljson -bare cert/ca/cert
         creates: cert/ca/cert-key.pem
         chdir: '{{playbook_dir}}/target'
+
+    - set_fact:
+        central_authority_configured_locally: yes 

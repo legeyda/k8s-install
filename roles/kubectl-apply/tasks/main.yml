@@ -1,0 +1,21 @@
+
+- name: create temporary file
+  tempfile:
+    state: file
+    suffix: .kubectl-apply.yml
+  register: tempfile_output
+
+- name: 'create configuration file for {{config_template}}'
+  template:
+    src: '{{config_template}}'
+    dest: '{{tempfile_output.path}}'
+
+- name: 'apply configuration file for {{config_template}}'
+  command:
+    argv:
+      - /opt/bin/kubectl
+      - apply
+      - --kubeconfig
+      - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'
+      - -f
+      - '{{tempfile_output.path}}'

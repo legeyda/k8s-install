@@ -7,7 +7,6 @@
         state: 'directory'
       loop: 
         - /tmp/download-etcd
-        - /opt/bin
       loop_control: {loop_var: dir}
       
     - name: download targz
@@ -39,60 +38,59 @@
 
 
 
-- name: guess etcd node name
-  set_fact:
-    etcd_node_name: '{{ etcd_node_name | default(node_name) | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
-      
+    - name: guess etcd node name
+      set_fact:
+        etcd_node_name: '{{ etcd_node_name | default(node_name) | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
+          
 
-- name: ensure directories exist
-  become: yes
-  file: 
-    path: '{{item}}'
-    state: directory
-    recurse: yes
-  with_items:
-    - /var/lib/etcd
-    - /etc/etcd/cert/ca
+    - name: ensure directories exist
+      file: 
+        path: '{{item}}'
+        state: directory
+        recurse: yes
+      with_items:
+        - /var/lib/etcd
+        - /etc/etcd/cert/ca
 
-- name: copy ca
-  copy:
-    src: '{{playbook_dir}}/target/cert/ca/cert.pem'
-    dest: /etc/etcd/cert/ca
+    - name: copy ca
+      copy:
+        src: '{{playbook_dir}}/target/cert/ca/cert.pem'
+        dest: /etc/etcd/cert/ca
 
-- name: generate certs
-  include_role:
-    name: gen-cert
-  vars:
-    cert_dir: '/etc/etcd/cert/{{cert_bearer}}'
-    common_name: 'etcd-{{cert_bearer}}'
-  loop: ['server', 'peer', 'client']
-  loop_control: {loop_var: cert_bearer}
+    - name: generate certs
+      include_role:
+        name: gen-cert
+      vars:
+        cert_dir: '/etc/etcd/cert/{{cert_bearer}}'
+        common_name: 'etcd-{{cert_bearer}}'
+      loop: ['server', 'peer', 'client']
+      loop_control: {loop_var: cert_bearer}
 
-- name: create etcd config file
-  template: 
-    src:  '{{role_path}}/templates/config.yaml.j2'
-    dest: '/etc/etcd/config.yaml'
-    mode: 644
+    - name: create etcd config file
+      template: 
+        src:  '{{role_path}}/templates/config.yaml.j2'
+        dest: '/etc/etcd/config.yaml'
+        mode: 644
 
-- name: create etcdctl env file
-  template: 
-    src:  '{{role_path}}/templates/ctlenv.sh.j2'
-    dest: '/etc/etcd/ctlenv.sh'
+    - name: create etcdctl env file
+      template: 
+        src:  '{{role_path}}/templates/ctlenv.sh.j2'
+        dest: '/etc/etcd/ctlenv.sh'
 
-- name: 'set default etcdctl environment'
-  lineinfile:
-      path: /etc/profile
-      line: . /etc/etcd/ctlenv.sh
+    - name: 'set default etcdctl environment'
+      lineinfile:
+          path: /etc/profile
+          line: . /etc/etcd/ctlenv.sh
 
-- name: create etcd systemd service
-  template: 
-    src:  '{{role_path}}/templates/etcd.service.j2'
-    dest: '/etc/systemd/system/etcd.service'
+    - name: create etcd systemd service
+      template: 
+        src:  '{{role_path}}/templates/etcd.service.j2'
+        dest: '/etc/systemd/system/etcd.service'
 
-- name: enable systemd service
-  systemd:
-    daemon_reload: yes
-    name: etcd
-    enabled: yes
-    state: restarted
-    masked: no
+    - name: enable systemd service
+      systemd:
+        daemon_reload: yes
+        name: etcd
+        enabled: yes
+        state: restarted
+        masked: no
