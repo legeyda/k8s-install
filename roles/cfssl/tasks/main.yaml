@@ -7,7 +7,7 @@
     - name: download cloudflare binaries remotely
       get_url:
         url: 'https://pkg.cfssl.org/R1.2/{{cflss_binary_name}}_linux-amd64'
-        dest: '/opt/bin/{{cflss_binary_name}}'
+        dest: '/usr/local/bin/{{cflss_binary_name}}'
         mode: ugo+x
       loop: 
         - cfssl

@@ -16,7 +16,7 @@
   - name: 'apply configuration file for {{config_template}}'
     command:
       argv:
-        - /opt/bin/kubectl
+        - /usr/local/bin/kubectl
         - apply
         - --kubeconfig
         - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'

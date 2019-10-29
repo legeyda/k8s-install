@@ -24,8 +24,8 @@
         - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
           shell: 
             cmd: >
-                /opt/bin/cfssl gencert -initca {{cert_dir}}/csr.json -config={{cert_dir}}/config.json |
-                /opt/bin/cfssljson -bare {{cert_dir}}/cert
+                /usr/local/bin/cfssl gencert -initca {{cert_dir}}/csr.json -config={{cert_dir}}/config.json |
+                /usr/local/bin/cfssljson -bare {{cert_dir}}/cert
             chdir: '{{cert_dir}}'
 
 

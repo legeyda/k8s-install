@@ -23,7 +23,7 @@
     - name: install
       copy:
         src: '/tmp/download-etcd/etcd-v3.4.0-linux-amd64/{{item}}'
-        dest: /opt/bin
+        dest: /usr/local/bin
         remote_src: yes
         mode: ugo+x
       with_items:
@@ -33,7 +33,7 @@
     - name: install etcctl wrapper with predefined options
       template:
         src: '{{role_path}}/templates/etcdctlwrap'
-        dest: /opt/bin/etcdctlwrap
+        dest: /usr/local/bin/etcdctlwrap
         mode: ugo+x
 
 

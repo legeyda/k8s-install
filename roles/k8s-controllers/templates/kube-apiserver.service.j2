@@ -3,7 +3,7 @@ Description=Kubernetes API Server
 Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
-ExecStart=/opt/bin/kube-apiserver \
+ExecStart=/usr/local/bin/kube-apiserver \
   --advertise-address={{hostvars[inventory_hostname].ansible_default_ipv4.address}} \
   --allow-privileged=true \
   --apiserver-count={{etcd_hosts|default(ansible_play_hosts)|length}} \

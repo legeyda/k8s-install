@@ -101,7 +101,7 @@
     - name: download kube-apiserver binary distribution
       get_url:
         url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{item}}'
-        dest: '/opt/bin/{{item}}'
+        dest: '/usr/local/bin/{{item}}'
         mode: ugo+x
       with_items: *binaries
 
@@ -134,7 +134,7 @@
 
     - name: wait till kube-apiserver is up
       pause:
-        minutes: 5
+        minutes: 2
 
     - set_fact:
         this_role_path: '{{role_path}}'

@@ -4,7 +4,7 @@ Documentation=https://github.com/coreos
 
 [Service]
 Environment=ETCD_UNSUPPORTED_ARCH=arm
-ExecStart=/opt/bin/etcd --config-file /etc/etcd/config.yaml
+ExecStart=/usr/local/bin/etcd --config-file /etc/etcd/config.yaml
 Restart=on-failure
 RestartSec=5
 

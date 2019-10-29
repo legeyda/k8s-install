@@ -19,8 +19,8 @@ Suppose node3 failed.
 
 1.	ssh to node1 and remove failed node from cluster:
 
-		sudo /opt/bin/etcdctlwrap member list
-		sudo /opt/bin/etcdctlwrap member remove <node 3 id discovered in the output of previous command>
+		sudo /usr/local/bin/etcdctlwrap member list
+		sudo /usr/local/bin/etcdctlwrap member remove <node 3 id discovered in the output of previous command>
 
 2.	reinstall whole cluster with `initial_cluster_state=existing` option
 		
@@ -28,7 +28,7 @@ Suppose node3 failed.
 
 3.	ssh to node1 and add new node:
 
-		sudo /opt/bin/etcdctlwrap member add node3 --peer-urls=https://node3:2380
+		sudo /usr/local/bin/etcdctlwrap member add node3 --peer-urls=https://node3:2380
 
 
 
