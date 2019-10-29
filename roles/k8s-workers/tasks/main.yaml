@@ -1,0 +1,119 @@
+
+- name: configure worker node
+  become: yes
+  block:
+
+  - name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
+    shell: swapoff -a
+    
+  # - name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
+  #   replace:
+  #     path: /etc/fstab
+  #     regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+  #     replace: '# \1'
+  #   when: kubernetes_installed is changed
+  
+  
+  - file:
+      path: '{{item}}'
+      state: directory
+    with_items:
+      - /opt/bin
+      - /etc/cni/net.d
+      - /opt/cni/bin
+  - name: download crictl
+    unarchive:
+      src: https://github.com/kubernetes-sigs/cri-tools/releases/download/v1.15.0/crictl-v1.15.0-linux-amd64.tar.gz
+      dest: /usr/local/bin
+      remote_src: yes
+  - name: download cni
+    unarchive:
+      src: https://github.com/containernetworking/plugins/releases/download/v0.8.2/cni-plugins-linux-amd64-v0.8.2.tgz
+      dest: /opt/cni/bin
+      remote_src: yes
+
+
+
+
+
+  - name: install packages
+    package:
+      name: containerd
+      state: present
+    with_items:
+      - containerd
+      - runc
+      - socat
+      - conntrack
+      - ipset
+
+
+  - name: create network configuration files
+    template:
+      src: '{{role_path}}/templates/{{item}}.conf.j2'
+      dest: '/etc/cni/net.d/{{item}}.conf'
+    with_items:
+      - 10-bridge
+      - 99-loopback
+
+
+  - name: generate cert for kubelet
+    include_role:
+      name: gen-cert
+    vars:
+      cert_dir: '/etc/k8s/cert/kubelet'
+      common_name: 'system:node:{{k8s_worker_node_name|default(k8s_node_name)|default(node_name)|default("k8s-worker-" + (1+ansible_play_batch.index(inventory_hostname))|string)}}'
+      organization: 'system:nodes'
+
+  - name: generate cert for kube-proxy
+    include_role:
+      name: gen-cert
+    vars:
+      cert_dir: '/etc/k8s/cert/kube-proxy'
+      common_name: 'system:kube-proxy'
+      organization: 'system:node-proxier'
+
+
+
+  - name: generate worker kubeconfig
+    include_role:
+      name: kubeconfig
+    vars:
+      client_name: '{{item}}'
+      client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
+      client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
+    with_items: &components
+      - kubelet
+      - kube-proxy
+
+  - name: copy config
+    template: 
+      src:  '{{role_path}}/templates/{{item}}.yml.j2'
+      dest: '/etc/k8s/{{item}}.yml'
+      mode: 644
+    with_items: *components
+    
+  - name: download kube worker binary distributions
+    get_url:
+      url: 'https://storage.googleapis.com/kubernetes-release/release/v1.15.3/bin/linux/amd64/{{item}}'
+      dest: '/usr/local/bin/{{item}}'
+      mode: ugo+x
+    with_items: *components
+
+  - name: create systemd service
+    template: 
+      src:  '{{role_path}}/templates/{{item}}.service.j2'
+      dest: '/etc/systemd/system/{{item}}.service'
+      mode: 644
+    with_items: *components
+
+  - name: enable systemd service
+    systemd:
+      daemon_reload: yes
+      name: '{{item}}'
+      enabled: yes
+      state: restarted
+      masked: no
+    with_items: *components
+
+

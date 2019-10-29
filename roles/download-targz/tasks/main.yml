@@ -1,0 +1,3 @@
+- file:
+    path:  '{{/tmp/download}}'
+    state: 'directory'

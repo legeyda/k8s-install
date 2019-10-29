@@ -1,0 +1,8 @@
+---
+- hosts: '{{target_hosts}}'
+  become: yes
+  roles:
+    - etc-hosts-lines
+    - etcd
+    - k8s-controllers
+    - k8s-workers
