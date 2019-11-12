@@ -1,5 +1,5 @@
 ---
-- hosts: '{{target_hosts}}'
+- hosts: '{{target_hosts|default(k8s_nodes)}}'
   become: yes
   roles:
     - etc-hosts-lines

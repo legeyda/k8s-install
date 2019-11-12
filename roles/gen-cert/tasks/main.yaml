@@ -1,5 +1,11 @@
 
+- name: 'get stat for {{cert_dir}}/cert.pem'
+  stat:
+    path: '{{cert_dir}}/cert.pem'
+  register: gen_cert_stat_result
+
 - name: generate remote certifiicate signed with local ca
+  when: gen_cert_stat_result.stat.exists == False
   block:
 
     - name: generate cert request on remote

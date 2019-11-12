@@ -5,14 +5,15 @@ After=containerd.service
 Requires=containerd.service
 
 [Service]
-ExecStart=/usr/local/bin/kubelet \\
-  --config=/etc/k8s/kubelet.yaml \\
-  --container-runtime=remote \\
-  --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \\
-  --image-pull-progress-deadline=2m \\
-  --kubeconfig=/var/lib/kubelet.kubeconfig \\
-  --network-plugin=cni \\
-  --register-node=true \\
+ExecStart=/usr/local/bin/kubelet \
+  --hostname-override={{k8s_worker_node_name|default(k8s_node_name)|default(node_name)|default("k8s-worker-" + (1+ansible_play_batch.index(inventory_hostname))|string)}} \
+  --config=/etc/k8s/kubelet.yml \
+  --container-runtime=remote \
+  --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \
+  --image-pull-progress-deadline=2m \
+  --kubeconfig=/etc/k8s/kubelet.kubeconfig \
+  --network-plugin=cni \
+  --register-node=true \
   --v=2
 Restart=on-failure
 RestartSec=5

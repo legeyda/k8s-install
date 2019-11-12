@@ -74,6 +74,16 @@
       organization: 'system:node-proxier'
 
 
+  - name:
+    file:
+      path: /etc/containerd
+      state: directory
+  - name: install containerd config
+    template:
+      src: '{{role_path}}/templates/containerd-config.toml.j2'
+      dest: /etc/containerd/config.toml
+
+
 
   - name: generate worker kubeconfig
     include_role:
