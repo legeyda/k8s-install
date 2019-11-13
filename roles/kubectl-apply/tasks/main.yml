@@ -2,18 +2,30 @@
   run_once: yes
   block:
 
-  - name: create temporary file
-    tempfile:
-      state: file
-      suffix: .kubectl-apply.yml
-    register: tempfile_output
+  - name: apply local template
+    when: config_template is defined
+    block:
+      - name: create temporary file
+        tempfile:
+          state: file
+          suffix: .kubectl-apply.yml
+        register: tempfile_output
+      - name: 'create configuration file for {{config_template}}'
+        template:
+          src: '{{config_template}}'
+          dest: '{{tempfile_output.path}}'
+      - name: 'apply configuration file for {{config_template}}'
+        command:
+          argv:
+            - /usr/local/bin/kubectl
+            - apply
+            - --kubeconfig
+            - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'
+            - -f
+            - '{{tempfile_output.path}}'
 
-  - name: 'create configuration file for {{config_template}}'
-    template:
-      src: '{{config_template}}'
-      dest: '{{tempfile_output.path}}'
-
-  - name: 'apply configuration file for {{config_template}}'
+  - name: 'apply file {{remote_config_file}}'
+    when: remote_config_file is defined
     command:
       argv:
         - /usr/local/bin/kubectl
@@ -21,4 +33,4 @@
         - --kubeconfig
         - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'
         - -f
-        - '{{tempfile_output.path}}'
+        - '{{remote_config_file}}'

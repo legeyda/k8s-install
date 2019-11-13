@@ -1,0 +1,7 @@
+
+
+- include_role:
+    name: kubectl-apply
+  vars:
+    remote_config_file: 'https://storage.googleapis.com/kubernetes-the-hard-way/coredns.yaml'
+
