@@ -132,7 +132,7 @@
 
 
 
-    - name: wait till kube-apiserver is up
+    - name: wait till kube-apiserver is up (skip if you run `sudo etcdctlwrap member list` and see all etcd nodes are up)
       pause:
         minutes: 5
 

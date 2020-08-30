@@ -5,7 +5,7 @@
       file:
         path:  '{{dir}}'
         state: 'directory'
-      loop: 
+      loop:
         - /tmp/download-etcd
       loop_control: {loop_var: dir}
       
@@ -37,7 +37,7 @@
         mode: ugo+x
 
 
-
+    # todo inline to config.yaml.j2
     - name: guess etcd node name
       set_fact:
         etcd_node_name: '{{ etcd_node_name | default(node_name) | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'

@@ -1,6 +1,7 @@
 # todo command argv
 
 - name: 'set-cluster (1/4) for {{client_name}}'
+  # todo remove assumption that worker nodes are the same that controller nodes
   command: >
       /usr/local/bin/kubectl
       config 
