@@ -6,7 +6,7 @@ Requires=containerd.service
 
 [Service]
 ExecStart=/usr/local/bin/kubelet \
-  --hostname-override={{k8s_worker_node_name|default(k8s_node_name)|default(node_name)|default("k8s-worker-" + (1+ansible_play_batch.index(inventory_hostname))|string)}} \
+  --hostname-override={{internal_hostname|default(inventory_hostname)}} \
   --config=/etc/k8s/kubelet.yml \
   --container-runtime=remote \
   --container-runtime-endpoint=unix:///var/run/containerd/containerd.sock \

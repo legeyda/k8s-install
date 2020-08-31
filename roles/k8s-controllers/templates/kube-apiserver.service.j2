@@ -5,7 +5,7 @@ Documentation=https://github.com/kubernetes/kubernetes
 [Service]
 # todo remove assumption that controller nodes are the same etcd nodes
 ExecStart=/usr/local/bin/kube-apiserver \
-  --advertise-address={{hostvars[inventory_hostname].ip_address|default(hostvars[inventory_hostname].ansible_default_ipv4.address)|default(hostvars[inventory_hostname].ansible_all_ipv4_addresses[0])}} \
+  --advertise-address={{hostvars[inventory_hostname].internal_ip_address|default(hostvars[inventory_hostname].ansible_default_ipv4.address)|default(hostvars[inventory_hostname].ansible_all_ipv4_addresses[0])}} \
   --allow-privileged=true \
   --apiserver-count={{ansible_play_hosts|length}} \
   --audit-log-maxage=30 \
@@ -20,7 +20,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --etcd-certfile=/etc/k8s/cert/kube-apiserver/cert.pem \
   --etcd-keyfile=/etc/k8s/cert/kube-apiserver/cert-key.pem \
   --etcd-servers=
-{%- for host in etcd_hosts|default(ansible_play_hosts) -%}
+{%- for host in etcd_host_list|default(ansible_play_hosts)|mandatory -%}
   https://{{host}}:2379{% if not loop.last %},{% endif %}
 {%- endfor %}
   --event-ttl=1h \

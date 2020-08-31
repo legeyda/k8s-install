@@ -36,11 +36,6 @@
         dest: /usr/local/bin/etcdctlwrap
         mode: ugo+x
 
-
-    # todo inline to config.yaml.j2
-    - name: guess etcd node name
-      set_fact:
-        etcd_node_name: '{{ etcd_node_name | default(node_name) | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
           
 
     - name: ensure directories exist
@@ -65,6 +60,11 @@
         common_name: 'etcd-{{cert_bearer}}'
       loop: ['server', 'peer', 'client']
       loop_control: {loop_var: cert_bearer}
+
+    # todo inline to config.yaml.j2
+    - name: guess etcd node name
+      set_fact:
+        etcd_node_name: '{{ etcd_node_name | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
 
     - name: create etcd config file
       template: 

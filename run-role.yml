@@ -1,4 +1,4 @@
 ---
-- hosts: '{{target_hosts}}'
+- hosts: '{{host_pattern|mandatory}}'
   roles:
-    - '{{target_role}}'
+    - '{{role_name|mandatory}}'

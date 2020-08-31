@@ -1,5 +1,17 @@
 - become: yes
   block:
+    - name: configure lines in /etc/hosts
+      block:
+        - include_role:
+            name: etc-hosts-lines
+          vars: 
+            destination_hosts: '{{etcd_hosts|default("")}}'
+        - include_role:
+            name: etc-hosts-lines
+          vars:
+            destination_hosts: '{{k8s_worker_hosts|default("")}}'
+
+
     - name:
       file:
         path: '{{item}}'
@@ -72,9 +84,13 @@
             organization: 'Kubernetes'
 
 
-
-
-
+    - when: etcd_hosts is defined
+      block:
+        - set_fact:
+            etcd_host_list: []
+        - set_fact:
+            etcd_host_list: "{{etcd_host_list + [ item ] }}"
+          with_inventory_hostnames: ['{{etcd_hosts}}']
 
 
     - name: generate kubernetes cert
@@ -132,7 +148,7 @@
 
 
 
-    - name: wait till kube-apiserver is up (skip if you run `sudo etcdctlwrap member list` and see all etcd nodes are up)
+    - name: wait till kube-apiserver is up
       pause:
         minutes: 5
 

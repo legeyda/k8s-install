@@ -1,6 +1,0 @@
----
-- hosts: '{{target_hosts}}'
-  become: yes
-  roles:
-    - etc-hosts-lines
-    - etcd

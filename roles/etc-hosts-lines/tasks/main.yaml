@@ -1,6 +1,20 @@
-- name: "setting ip addresses of all hosts to each node's /etc/hosts"
-  become: yes
-  lineinfile:
-    path: /etc/hosts
-    line: '{{hostvars[item].internal_ip_address|default(hostvars[item].ansible_default_ipv4.address)|default(hostvars[item].ansible_all_ipv4_addresses[0])}} {{item}}'
-  with_items: '{{ansible_play_hosts}}'
+# if destination_hosts is defined, parse it as as host list and add them to /etc/hosts
+# otherwise just add currently run hosts to /etc/hosts
+- become: yes
+  block:
+    - debug:
+        msg: '{{destination_hosts|default("")|string}}'
+
+    - when: 'destination_hosts|default("")|string|length>0'
+      lineinfile: &lineinfile_config
+        path: /etc/hosts
+        line: '{{hostvars[item].internal_ip_address
+          |default(hostvars[item].ansible_default_ipv4.address)
+          |default(hostvars[item].ansible_all_ipv4_addresses[0])
+          |default(hostvars[item].inventory_hostname)}} {{hostvars[item].internal_hostname
+          |default(item)}} # ansible'
+      with_inventory_hostnames:
+        - '{{destination_hosts}}'
+    - when: 'destination_hosts|default("")|string|length==0'
+      lineinfile: *lineinfile_config
+      with_items: '{{ansible_play_hosts}}'

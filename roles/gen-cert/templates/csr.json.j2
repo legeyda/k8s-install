@@ -2,7 +2,7 @@
   "CN": "{{common_name|default('bearer')}}",
 
   "hosts": [
-{% for hostname in cert_hostnames|default(['localhost', inventory_hostname])|select('defined') %}
+{% for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') %}
     "{{hostname}}"{% if not loop.last %},{% endif %}
 {%- endfor %}
   ],

@@ -2,6 +2,10 @@
 - name: configure worker node
   become: yes
   block:
+  - include_role:
+      name: etc-hosts-lines
+    vars:
+      destination_hosts: '{{k8s_controller_hosts|default("")}}'
 
   - name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
     shell: swapoff -a
@@ -57,12 +61,24 @@
       - 99-loopback
 
 
+  - name:
+    file:
+      path: '{{item}}'
+      state: directory
+    with_items:
+      - /etc/k8s/cert/ca
+
+  - name: copy ca certificate
+    copy:
+      src: '{{playbook_dir}}/target/cert/ca/cert.pem'
+      dest: /etc/k8s/cert/ca/cert.pem
+
   - name: generate cert for kubelet
     include_role:
       name: gen-cert
     vars:
       cert_dir: '/etc/k8s/cert/kubelet'
-      common_name: 'system:node:{{k8s_worker_node_name|default(k8s_node_name)|default(node_name)|default("k8s-worker-" + (1+ansible_play_batch.index(inventory_hostname))|string)}}'
+      common_name: 'system:node:{{internal_host_name|default(inventory_hostname)|default("k8s-worker-" + (1+ansible_play_batch.index(inventory_hostname))|string)}}'
       organization: 'system:nodes'
 
   - name: generate cert for kube-proxy
@@ -83,12 +99,20 @@
       src: '{{role_path}}/templates/containerd-config.toml.j2'
       dest: /etc/containerd/config.toml
 
+  - when: k8s_controller_hosts is defined
+    block:
+      - set_fact:
+          k8s_controller_host_list: []
+      - set_fact:
+          k8s_controller_host_list: "{{k8s_controller_host_list + [ item ] }}"
+        with_inventory_hostnames: ['{{k8s_controller_hosts}}']
 
-
-  - name: generate worker kubeconfig
+  - name: 'generate worker kubeconfig for {{item}}'
     include_role:
       name: kubeconfig
     vars:
+      apiserver_hostname: '{{(k8s_controller_host_list|default(ansible_play_hosts))[
+        ansible_play_batch.index(inventory_hostname) % k8s_controller_host_list|default(ansible_play_hosts)|length]}}'
       client_name: '{{item}}'
       client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
       client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'

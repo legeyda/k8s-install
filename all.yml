@@ -1,9 +1,0 @@
----
-# todo for now etcd_nodes, k8s_controller_nodes, k8s_worker_nodes should be the same
-- hosts: '{{target_hosts|default(k8s_nodes)}}'
-  become: yes
-  roles:
-    - etc-hosts-lines
-    - etcd
-    - k8s-controllers
-    - k8s-workers

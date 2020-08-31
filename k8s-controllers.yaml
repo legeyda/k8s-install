@@ -1,8 +1,0 @@
----
-- hosts: '{{target_hosts|default("non")}}'
-  become: yes
-  roles:
-    #- binary-path
-    #- local-ca
-    #- etc-hosts-lines
-    - k8s-controllers
