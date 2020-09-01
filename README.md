@@ -132,8 +132,8 @@ Working with etcd node failures
 		5b464a2f75a38e65, started, etcd-c, https://k8s-3:2380, https://k8s-3:2379, false
 		69e952a5a6a6e798, started, etcd-a, https://k8s-1:2380, https://k8s-1:2379, false
 		aee4be324f12ea53, started, etcd-b, https://k8s-2:2380, https://k8s-2:2379, false
-		sudo /usr/local/bin/etcdctlwrap member remove aee4be324f12ea53
-		sudo /usr/local/bin/etcdctlwrap member add etcd-b --peer-urls=https://k8s-4:2380
+		$ sudo etcdctlwrap member remove aee4be324f12ea53
+		$ sudo etcdctlwrap member add etcd-b --peer-urls=https://k8s-4:2380
 		$ sudo etcdctlwrap member list
 		14967b194abf439, started, etcd-b, https://k8s-4:2380, https://k8s-4:2379, false
 		5b464a2f75a38e65, started, etcd-c, https://k8s-3:2380, https://k8s-3:2379, false
