@@ -12,10 +12,10 @@ Install kubernetes
 		[defaults]
 		inventory = /home/user/.ansible-hosts.ini
 
-	Create file `~/.ansible-hosts.ini'` with content like the following.
+	Create file `~/.ansible-hosts.ini` with content like the following.
 
 		[etcd]
-troubleshooting		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101
+		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101
 		k8s-2 ansible_host=192.168.56.102 internal_ip_address=192.168.56.102
 
 		[k8s_controllers]
@@ -25,7 +25,7 @@ troubleshooting		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.5
 		[k8s_workers]
 		k8s-5 ansible_host=192.168.56.105 internal_ip_address=192.168.56.105
 		k8s-6 ansible_host=192.168.56.106 internal_ip_address=192.168.56.106
-
+	
 	If any host have multiple ip addresses, use `internal_ip_address` variable
 	to specify which one is for communication between hosts inside cluster.
 
