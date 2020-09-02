@@ -81,7 +81,7 @@ Smoke test
 Working with etcd node failures
 ----------------------------------
 
-1.	Configure etcd cluster hosts in `~/.ansible-hosts.ini'`.
+1.	Configure etcd cluster hosts in `~/.ansible-hosts.ini`.
 
 		[test_etcd_v1]
 		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101 etcd_node_name=etcd-a
