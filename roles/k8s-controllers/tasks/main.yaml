@@ -150,7 +150,7 @@
 
     - name: wait till kube-apiserver is up
       pause:
-        minutes: 5
+        minutes: 3
 
     - set_fact:
         this_role_path: '{{role_path}}'
