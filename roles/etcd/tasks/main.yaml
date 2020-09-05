@@ -11,18 +11,18 @@
       
     - name: download targz
       get_url:
-         url: 'https://github.com/etcd-io/etcd/releases/download/v3.4.0/etcd-v3.4.0-linux-amd64.tar.gz'
-         dest: /tmp/download-etcd/etcd-v3.4.0-linux-amd64.tar.gz
+         url: 'https://github.com/etcd-io/etcd/releases/download/v3.4.10/etcd-v3.4.10-linux-amd64.tar.gz'
+         dest: /tmp/download-etcd/etcd-v3.4.10-linux-amd64.tar.gz
 
     - name: extract
       unarchive:
-        src: /tmp/download-etcd/etcd-v3.4.0-linux-amd64.tar.gz
+        src: /tmp/download-etcd/etcd-v3.4.10-linux-amd64.tar.gz
         dest: /tmp/download-etcd
         remote_src: yes
 
     - name: install
       copy:
-        src: '/tmp/download-etcd/etcd-v3.4.0-linux-amd64/{{item}}'
+        src: '/tmp/download-etcd/etcd-v3.4.10-linux-amd64/{{item}}'
         dest: /usr/local/bin
         remote_src: yes
         mode: ugo+x

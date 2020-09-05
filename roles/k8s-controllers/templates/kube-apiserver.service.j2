@@ -3,7 +3,6 @@ Description=Kubernetes API Server
 Documentation=https://github.com/kubernetes/kubernetes
 
 [Service]
-# todo remove assumption that controller nodes are the same etcd nodes
 ExecStart=/usr/local/bin/kube-apiserver \
   --advertise-address={{hostvars[inventory_hostname].internal_ip_address|default(hostvars[inventory_hostname].ansible_default_ipv4.address)|default(hostvars[inventory_hostname].ansible_all_ipv4_addresses[0])}} \
   --allow-privileged=true \
@@ -29,7 +28,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --kubelet-client-certificate=/etc/k8s/cert/kube-apiserver/cert.pem \
   --kubelet-client-key=/etc/k8s/cert/kube-apiserver/cert-key.pem \
   --kubelet-https=true \
-  --runtime-config=api/all \
+  --runtime-config='api/all=true' \
   --service-account-key-file=/etc/k8s/cert/service-account/cert.pem \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
