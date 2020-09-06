@@ -28,9 +28,9 @@
             mode: 644
 
         - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
-          shell: 
+          shell:
             cmd: >
-                /usr/local/bin/cfssl gencert -initca {{cert_dir}}/csr.json -config={{cert_dir}}/config.json |
+                /usr/local/bin/cfssl gencert -initca {{cert_dir}}/csr.json |
                 /usr/local/bin/cfssljson -bare {{cert_dir}}/cert
             chdir: '{{cert_dir}}'
 
