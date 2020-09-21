@@ -15,16 +15,16 @@ Install kubernetes
 	Create file `~/.ansible-hosts.ini` with content like the following.
 
 		[etcd]
-		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101
-		k8s-2 ansible_host=192.168.56.102 internal_ip_address=192.168.56.102
+		k8s-1 internal_ip_address=192.168.56.101
+		k8s-2 internal_ip_address=192.168.56.102
 
 		[k8s_controllers]
-		k8s-3 ansible_host=192.168.56.103 internal_ip_address=192.168.56.103
-		k8s-4 ansible_host=192.168.56.104 internal_ip_address=192.168.56.104
+		k8s-3 internal_ip_address=192.168.56.103
+		k8s-4 internal_ip_address=192.168.56.104
 
 		[k8s_workers]
-		k8s-5 ansible_host=192.168.56.105 internal_ip_address=192.168.56.105
-		k8s-6 ansible_host=192.168.56.106 internal_ip_address=192.168.56.106
+		k8s-5 internal_ip_address=192.168.56.105
+		k8s-6 internal_ip_address=192.168.56.106
 	
 	If any host have multiple ip addresses, use `internal_ip_address` variable
 	to specify which one is for communication between hosts inside cluster.
@@ -84,9 +84,9 @@ Working with etcd node failures
 1.	Configure etcd cluster hosts in `~/.ansible-hosts.ini`.
 
 		[test_etcd_v1]
-		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101 etcd_node_name=etcd-a
-		k8s-2 ansible_host=192.168.56.102 internal_ip_address=192.168.56.102 etcd_node_name=etcd-b
-		k8s-3 ansible_host=192.168.56.103 internal_ip_address=192.168.56.103 etcd_node_name=etcd-c
+		k8s-1 internal_ip_address=192.168.56.101 etcd_node_name=etcd-a
+		k8s-2 internal_ip_address=192.168.56.102 etcd_node_name=etcd-b
+		k8s-3 internal_ip_address=192.168.56.103 etcd_node_name=etcd-c
 
 2.	Install etcd on initial cluster.
 
@@ -117,9 +117,9 @@ Working with etcd node failures
 	Let failed second host be replaced with new one.
 
 		[test_etcd_v2]
-		k8s-1 ansible_host=192.168.56.101 internal_ip_address=192.168.56.101 etcd_node_name=etcd-a
-		k8s-4 ansible_host=192.168.56.104 internal_ip_address=192.168.56.104 etcd_node_name=etcd-b
-		k8s-3 ansible_host=192.168.56.103 internal_ip_address=192.168.56.103 etcd_node_name=etcd-c
+		k8s-1 internal_ip_address=192.168.56.101 etcd_node_name=etcd-a
+		k8s-4 internal_ip_address=192.168.56.104 etcd_node_name=etcd-b
+		k8s-3 internal_ip_address=192.168.56.103 etcd_node_name=etcd-c
 
 7.	Reinstall new version of cluster with `initial_cluster_state=existing` option
 		

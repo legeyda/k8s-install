@@ -2,3 +2,4 @@ dependencies:
   - role: binary-path
   - role: kubectl
   - role: local-ca
+  - role: local-kubectl-user

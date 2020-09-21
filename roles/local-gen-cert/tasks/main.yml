@@ -1,0 +1,32 @@
+- name: role local-gen-cert
+  delegate_to: localhost
+  run_once: true
+  block:
+
+    - name: ensure local dir '{{cert_dir}}'
+      file: 
+        path: '{{cert_dir}}'
+        state: directory
+        recurse: yes
+
+    - name: 'save cert config to {{cert_dir}}/config.json'
+      template:
+        src: '{{ config_template | default(playbook_dir + "/roles/gen-cert/templates/csr.json.j2") }}'
+        dest: '{{cert_dir}}/config.json'
+
+    - name: 'save cert request {{cert_dir}}/csr.json'
+      template: 
+        src:  '{{csr_template | default(playbook_dir + "/roles/gen-cert/templates/csr.json.j2") }}'
+        dest: '{{cert_dir}}/csr.json'
+
+    - name: 'generate cert request {{cert_dir}}/cert.csr'
+      shell:
+        cmd: >
+          {{playbook_dir}}/target/bin/cfssl gencert -initca {{cert_dir}}/csr.json |
+          {{playbook_dir}}/target/bin/cfssljson -bare {{cert_dir}}/cert
+        chdir: '{{cert_dir}}'
+
+    - include_role:
+        name: local-sign-cert-request
+      vars: 
+        sign_request: '{{cert_dir}}/cert.csr'

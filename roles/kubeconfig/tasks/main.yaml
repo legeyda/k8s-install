@@ -1,9 +1,8 @@
 # todo command argv
 
 - name: 'set-cluster (1/4) for {{client_name}}'
-  # todo remove assumption that worker nodes are the same that controller nodes
   command: >
-      /usr/local/bin/kubectl
+      {{kubectl_executable|default('/usr/local/bin/kubectl')}}
       config 
       set-cluster
       '{{k8s_cluster_name|default(cluster_name)|default("k8s-cluster")}}'
@@ -14,7 +13,7 @@
 
 - name: 'set-credentials (2/4) for {{client_name}}'
   command: >
-      /usr/local/bin/kubectl
+      {{kubectl_executable|default('/usr/local/bin/kubectl')}}
       config 
       set-credentials
       '{{client_name}}'
@@ -25,7 +24,7 @@
 
 - name: 'set-context (3/4) for {{client_name}}'
   command: >
-      /usr/local/bin/kubectl
+      {{kubectl_executable|default('/usr/local/bin/kubectl')}}
       config
       set-context
       default
@@ -35,7 +34,7 @@
 
 - name: 'use-context (4/4) for {{client_name}}'
   command: >
-      /usr/local/bin/kubectl
+      {{kubectl_executable|default('/usr/local/bin/kubectl')}}
       config
       use-context
       default

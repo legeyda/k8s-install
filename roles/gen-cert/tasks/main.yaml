@@ -49,19 +49,10 @@
             dest: '{{playbook_dir}}/target/fetch'
           register: fetch_result
 
-        - name: sign cert request locally with ca private key
-          delegate_to: localhost
-          become: no
-          shell: 
-            cmd: >
-                {{playbook_dir}}/target/bin/cfssl sign \
-                        -ca {{playbook_dir}}/target/cert/ca/cert.pem \
-                        -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
-                        -config='{{playbook_dir}}/target/cert/ca/config.json' \
-                        -profile {{config_profile|default('default')}} \
-                        -hostname {{cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined')|join(',')}} \
-                        {{fetch_result.dest}} | \
-                {{playbook_dir}}/target/bin/cfssljson -bare {{fetch_result.dest|dirname}}/{{fetch_result.dest|basename|splitext|first}}
+        - include_role:
+            name: local-sign-cert-request
+          vars: 
+            sign_request: '{{fetch_result.dest}}'
 
     - name: copy back to remote signed certificate for {{cert_dir}}
       copy:

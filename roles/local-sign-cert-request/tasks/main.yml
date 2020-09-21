@@ -1,0 +1,19 @@
+- name: local-sign-cert-request
+  delegate_to: localhost
+  become: no
+  # todo delegate_facts: false
+  block:
+    - name: sign cert request locally with ca private key
+      shell: 
+        cmd: >
+          {{playbook_dir}}/target/bin/cfssl sign \
+                  -ca {{playbook_dir}}/target/cert/ca/cert.pem \
+                  -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
+                  -config='{{playbook_dir}}/target/cert/ca/config.json' \
+                  -profile {{config_profile|default('default')}} \
+                  -hostname {{cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined')|join(',')}} \
+                  {{sign_request}} | \
+          {{playbook_dir}}/target/bin/cfssljson -bare {{sign_request|dirname}}/{{sign_request|basename|splitext|first}}
+              
+    - set_fact:
+        singed_cert: '{{sign_request|dirname}}/{{sign_request|basename|splitext|first}}.pem'

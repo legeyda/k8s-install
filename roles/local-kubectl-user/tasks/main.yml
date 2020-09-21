@@ -1,0 +1,65 @@
+- name: record original ansible_host
+  set_fact:
+    original_ansible_host: '{{ansible_host}}'
+
+- name: local-kubeclt role
+  become: false
+  delegate_to: localhost
+  run_once: true
+  block:
+
+    - name: 'ensure local directory {{playbook_dir}}/target/bin/'
+      file:
+        path: '{{playbook_dir}}/target/{{item}}'
+        state: 'directory'
+        recurse: yes
+      with_items:
+        - bin
+        - config
+        - 'cert/{{user_name|default("admin")}}'
+
+    - name: download kubectl binary distribution locally
+      become: yes
+      get_url:
+        url: 'https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl'
+        dest: '{{playbook_dir}}/target/bin/kubectl'
+        mode: ugo+x
+
+    - name: local gen-cert
+      include_role:
+        name: local-gen-cert
+      vars:
+        common_name: '{{user_name|default("admin")}}'
+        cert_dir: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}'
+        organization: 'system:masters'
+        
+
+    - when: k8s_controller_hosts is defined
+      block:
+        - set_fact:
+            k8s_controller_host_list: []
+        - set_fact:
+            k8s_controller_host_list: "{{k8s_controller_host_list + [ item ] }}"
+          with_inventory_hostnames: ['{{k8s_controller_hosts}}']
+  
+    - name: 'generage kubeconfig file for local {{user_name|default("admin")}}'
+      include_role:
+        name: kubeconfig
+      vars:
+        - kubectl_executable: '{{playbook_dir}}/target/bin/kubectl'
+        - client_name: '{{user_name|default("admin")}}'
+        - apiserver_hostname: '{{inventory_hostname}}'
+        - client_cert: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}/cert.pem'
+        - client_key: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}/cert-key.pem'
+        - kubeconfig_file: '{{playbook_dir}}/target/config/{{user_name|default("admin")}}.kubeconfig'
+        - ca_cert: '{{playbook_dir}}/target/cert/ca/cert.pem'
+
+
+    - name: install bash command line activator
+      template:
+        src: '{{role_path}}/templates/activate.sh.j2'
+        dest: '{{playbook_dir}}/target/{{user_name|default("admin")}}-activate.sh'
+        mode: ugo+x
+
+
+    
