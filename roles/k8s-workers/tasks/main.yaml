@@ -41,7 +41,7 @@
 
   - name: install packages
     package:
-      name: containerd
+      name: '{{item}}'
       state: present
     with_items:
       - containerd
@@ -133,20 +133,12 @@
       mode: ugo+x
     with_items: *components
 
-  - name: create systemd service
-    template: 
-      src:  '{{role_path}}/templates/{{item}}.service.j2'
-      dest: '/etc/systemd/system/{{item}}.service'
-      mode: 644
+  - set_fact:
+      this_role_path: '{{role_path}}'
+
+  - include_role:
+      name: systemd-service
+    vars:
+      service_name: '{{item}}'
+      service_file_template: '{{this_role_path}}/templates/{{item}}.service.j2'
     with_items: *components
-
-  - name: enable systemd service
-    systemd:
-      daemon_reload: yes
-      name: '{{item}}'
-      enabled: yes
-      state: restarted
-      masked: no
-    with_items: *components
-
-

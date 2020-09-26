@@ -1,7 +1,12 @@
 
+- name: 'ensure {{kubectl_executable|dirname}} exists'
+  file: 
+    path: '{{kubectl_executable|dirname}}'
+    state: directory
+    recurse: yes
+
 - name: download kubectl binary distribution
-  become: yes
   get_url:
     url: 'https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl'
-    dest: /usr/local/bin
+    dest: '{{kubectl_executable}}'
     mode: ugo+x

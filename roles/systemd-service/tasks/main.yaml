@@ -1,7 +1,7 @@
 
 - name: 'create {{service_name}} systemd service'
   template: 
-    src:  '{{playbook_dir}}/src/systemd/{{service_name}}.service.j2'
+    src:  '{{service_file_template}}'
     dest: '/etc/systemd/system/{{service_name}}.service'
     mode: 644
 

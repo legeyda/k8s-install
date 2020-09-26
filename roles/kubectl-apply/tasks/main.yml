@@ -17,10 +17,10 @@
       - name: 'apply configuration file for {{config_template}}'
         command:
           argv:
-            - /usr/local/bin/kubectl
+            - '{{kubectl_binary}}'
             - apply
             - --kubeconfig
-            - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'
+            - '{{kubeconfig_path}}'
             - -f
             - '{{tempfile_output.path}}'
 
@@ -28,9 +28,9 @@
     when: remote_config_file is defined
     command:
       argv:
-        - /usr/local/bin/kubectl
+        - '{{kubectl_binary}}'
         - apply
         - --kubeconfig
-        - '{{kubeconfig_path|default("/etc/k8s/admin.kubeconfig")}}'
+        - '{{kubeconfig_path}}'
         - -f
         - '{{remote_config_file}}'

@@ -61,8 +61,8 @@
             name: gen-cert
           vars:
             cert_dir: '/etc/k8s/cert/admin'
-            common_name: 'admin'
-            organization: 'system:masters'
+            common_name: admin
+            organization: system:masters
 
         - name: 'generate kube config for admin'
           include_role:
@@ -97,6 +97,7 @@
       include_role:
         name: gen-cert
       vars:
+        cert_hostnames: ['localhost', '10.32.0.1', 'k8s', '{{internal_hostname|default(inventory_hostname)}}']
         cert_dir: '/etc/k8s/cert/{{item}}'
         common_name: 'system:{{item}}'
         organization: 'system:{{item}}'
@@ -122,22 +123,12 @@
       with_items: *binaries
 
     - name: create systemd service
-      template: 
-        src:  '{{role_path}}/templates/{{item}}.service.j2'
-        dest: '/etc/systemd/system/{{item}}.service'
-        mode: 644
-      with_items: *binaries
-
-    - name: enable systemd service
-      systemd:
-        daemon_reload: yes
-        name: '{{item}}'
-        enabled: yes
-        state: restarted
-        masked: no
-      with_items: *binaries
-
-
+      include_role:
+        name: systemd-service
+      vars:
+        service_name: '{{item}}'
+        service_file_template: '{{playbook_dir}}/roles/k8s-controllers/templates/{{item}}.service.j2'
+      with_items: *binaries  
 
 
 

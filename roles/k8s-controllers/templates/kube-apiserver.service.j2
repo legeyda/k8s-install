@@ -34,7 +34,8 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=/etc/k8s/cert/kube-apiserver/cert.pem \
   --tls-private-key-file=/etc/k8s/cert/kube-apiserver/cert-key.pem \
-  --v=2
+  --v=2 \
+  --feature-gates=EphemeralContainers=true
 Restart=on-failure
 RestartSec=5
 

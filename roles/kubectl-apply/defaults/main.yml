@@ -1,0 +1,2 @@
+kubectl_binary: /usr/local/bin/kubectl
+kubeconfig_path: /etc/k8s/admin.kubeconfig

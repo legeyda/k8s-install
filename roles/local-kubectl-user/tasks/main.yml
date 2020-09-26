@@ -19,19 +19,18 @@
         - 'cert/{{user_name|default("admin")}}'
 
     - name: download kubectl binary distribution locally
-      become: yes
       get_url:
         url: 'https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl'
         dest: '{{playbook_dir}}/target/bin/kubectl'
         mode: ugo+x
 
-    - name: local gen-cert
+    - name: gen-cert
       include_role:
-        name: local-gen-cert
+        name: gen-cert
       vars:
         common_name: '{{user_name|default("admin")}}'
         cert_dir: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}'
-        organization: 'system:masters'
+        organization: '{{user_organization|default("system:masters")}}'
         
 
     - when: k8s_controller_hosts is defined

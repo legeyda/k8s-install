@@ -1,19 +1,20 @@
 ---
-- name: install cfssl binaries on remote host
-  become: yes
-  when: cfssl_installed_remotely|default(False) == False
-  block: 
+- name: 'ensure dir {{binary_dir}} exist'
+  file: 
+    path: '{{binary_dir}}'
+    state: directory
+    recurse: yes
 
-    - name: download cloudflare binaries remotely
-      get_url:
-        url: 'https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/1.4.1/linux/{{cflss_binary_name}}'
-        dest: '/usr/local/bin/{{cflss_binary_name}}'
-        mode: ugo+x
-      loop: 
-        - cfssl
-        - cfssljson
-      loop_control: {loop_var: cflss_binary_name}
-        
-    - name: keep from running multiple times
-      set_fact: 
-        cfssl_installed_remotely: True
+- name: download cloudflare binaries remotely
+  get_url:
+    url: 'https://storage.googleapis.com/kubernetes-the-hard-way/cfssl/1.4.1/linux/{{cfssl_binary_item.name}}'
+    dest: '{{binary_dir}}/{{cfssl_binary_item.name}}'
+    #size: '{{cfssl_binary_item.size}}'
+    mode: ugo+x
+  loop: 
+    - name: cfssl
+      size: 10376657
+    - name: cfssljson
+      size: 2227873
+  loop_control: 
+    loop_var: cfssl_binary_item

@@ -8,7 +8,7 @@
   when: gen_cert_stat_result.stat.exists == False
   block:
 
-    - name: generate cert request on remote
+    - name: generate cert request on remote and fetch
       block:
         - name: ensure remote dir exists
           file: 
@@ -25,7 +25,6 @@
           template: 
             src:  '{{csr_template | default(role_path + "/templates/csr.json.j2") }}'
             dest: '{{cert_dir}}/csr.json'
-            mode: 644
 
         - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
           shell:
@@ -34,28 +33,32 @@
                 /usr/local/bin/cfssljson -bare {{cert_dir}}/cert
             chdir: '{{cert_dir}}'
 
-
-    - name: fetch and sign cert request with local ca
-      block:
-        - name: make local directories
-          delegate_to: localhost
-          run_once: yes
-          become: no
-          file: {path: '{{playbook_dir}}/target/fetch', state: directory, recurse: yes}
-
         - name: fetch cert request for local signing
           fetch:
             src: '{{cert_dir}}/cert.csr'
             dest: '{{playbook_dir}}/target/fetch'
           register: fetch_result
 
-        - include_role:
-            name: local-sign-cert-request
-          vars: 
+    - name: '(copy request to ca host and) sign cert request with ca'
+      delegate_to: localhost
+      become: no
+      block:
+        - set_fact:
             sign_request: '{{fetch_result.dest}}'
 
+        - name: sign cert request locally with ca private key
+          shell: 
+            cmd: >
+              {{playbook_dir}}/target/bin/cfssl sign \
+                      -ca {{playbook_dir}}/target/cert/ca/cert.pem \
+                      -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
+                      -config='{{playbook_dir}}/target/cert/ca/config.json' \
+                      -profile {{config_profile|default('default')}} \
+                      {{sign_request}} | \
+              {{playbook_dir}}/target/bin/cfssljson -bare {{sign_request|dirname}}/{{sign_request|basename|splitext|first}}
+                  
     - name: copy back to remote signed certificate for {{cert_dir}}
       copy:
-        src: '{{fetch_result.dest|dirname}}/{{fetch_result.dest|basename|splitext|first}}.pem'
+        src: '{{sign_request|dirname}}/{{sign_request|basename|splitext|first}}.pem'
         dest: '{{cert_dir}}'
         backup: yes

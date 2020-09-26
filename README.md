@@ -59,13 +59,18 @@ Install kubernetes
 
 
 
-todo
+Quick install on thee nodes
+---------------------------------
+
+	ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=k8s-1,k8s-2 \
+	&& ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s-2,k8s-3 -e etcd_hosts=k8s-1,k8s-2 -e k8s_worker_hosts=k8s-1,k8s-3 \
+	&& ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s-1,k8s-3 -e k8s_controller_hosts=k8s-2,k8s-3
 
 
 
 
-Smoke test
----------------
+Smoke test (from kubernetes the hard way)
+-----------------------------------------------
 
 	ssh user@one-of-k8s-controllers
 	kubectl create deployment nginx --image=nginx
@@ -76,6 +81,11 @@ Smoke test
 	curl --head http://127.0.0.1:8080
 
 
+Make initial cluster configuration
+----------------------------
+
+	. target/admin-actvate.sh
+	./configure-cluster
 
 
 Working with etcd node failures

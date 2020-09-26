@@ -2,9 +2,6 @@
 # otherwise just add currently run hosts to /etc/hosts
 - become: yes
   block:
-    - debug:
-        msg: '{{destination_hosts|default("")|string}}'
-
     - when: 'destination_hosts|default("")|string|length>0'
       lineinfile: &lineinfile_config
         path: /etc/hosts
