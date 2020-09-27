@@ -32,7 +32,7 @@ Install kubernetes
 
 2.	Install etcd
 
-		ansible-playbook run-role.yml -e role_name=etcd -e host_pattern=etcd
+		ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=etcd
 
 	Check etcd works
 
@@ -41,11 +41,11 @@ Install kubernetes
 
 3.	Install kubernetes controllers, given etcd and workers hosts are known
 
-		ansible-playbook run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s_controllers -e etcd_hosts=etcd -e k8s_worker_hosts=k8s_workers
+		ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s_controllers -e etcd_hosts=etcd -e k8s_worker_hosts=k8s_workers
 
 4.	Install kubernetes controllers, given etcd and workers hosts are known
 
-		ansible-playbook run-role.yml -e role_name=k8s-workers -e host_pattern=k8s_workers -e k8s_controller_hosts=k8s_controllers
+		ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s_workers -e k8s_controller_hosts=k8s_controllers
 
 
 2.	Run entire kubernetes installation
@@ -55,7 +55,7 @@ Install kubernetes
 
 	Or run single role, e.g.:
 
-		ansible-playbook run-role.yml -e play_hosts=k8s -e play_role=k8s-controllers -e etcd_hosts=etcd_hosts
+		ansible-playbook --become run-role.yml -e play_hosts=k8s -e play_role=k8s-controllers -e etcd_hosts=etcd_hosts
 
 
 
@@ -94,7 +94,7 @@ Working with etcd node failures
 
 2.	Install etcd on initial cluster.
 
-		ansible-playbook run-role.yml -e role_name=etcd -e host_pattern=test_etcd_v1
+		ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=test_etcd_v1
 
 3.	Put key to etcd cluster.
 
@@ -127,7 +127,7 @@ Working with etcd node failures
 
 7.	Reinstall new version of cluster with `initial_cluster_state=existing` option
 		
-		ansible-playbook run-role.yml -e role_name=etcd -e host_pattern=test_etcd_v2 -e initial_cluster_state=existing
+		ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=test_etcd_v2 -e initial_cluster_state=existing
 
 8.	Manually replace failed node in cluster with new one.
 
