@@ -81,12 +81,6 @@ Smoke test (from kubernetes the hard way)
 	curl --head http://127.0.0.1:8080
 
 
-Make initial cluster configuration
-----------------------------
-
-	. target/admin-actvate.sh
-	./configure-cluster
-
 
 Working with etcd node failures
 ----------------------------------
