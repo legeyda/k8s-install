@@ -1,7 +1,3 @@
-- name: record original ansible_host
-  set_fact:
-    original_ansible_host: '{{ansible_host}}'
-
 - name: local-kubeclt role
   become: false
   delegate_to: localhost
@@ -16,7 +12,7 @@
       with_items:
         - bin
         - config
-        - 'cert/{{user_name|default("admin")}}'
+        - 'cert/{{user_name}}'
 
     - name: download kubectl binary distribution locally
       get_url:
@@ -28,8 +24,8 @@
       include_role:
         name: gen-cert
       vars:
-        common_name: '{{user_name|default("admin")}}'
-        cert_dir: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}'
+        common_name: '{{user_name}}'
+        cert_dir: '{{playbook_dir}}/target/cert/{{user_name}}'
         organization: '{{user_organization|default("system:masters")}}'
         
 
@@ -41,23 +37,23 @@
             k8s_controller_host_list: "{{k8s_controller_host_list + [ item ] }}"
           with_inventory_hostnames: ['{{k8s_controller_hosts}}']
   
-    - name: 'generage kubeconfig file for local {{user_name|default("admin")}}'
+    - name: 'generage kubeconfig file for local {{user_name}}'
       include_role:
         name: kubeconfig
       vars:
         - kubectl_executable: '{{playbook_dir}}/target/bin/kubectl'
-        - client_name: '{{user_name|default("admin")}}'
+        - client_name: '{{user_name}}'
         - apiserver_hostname: '{{inventory_hostname}}'
-        - client_cert: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}/cert.pem'
-        - client_key: '{{playbook_dir}}/target/cert/{{user_name|default("admin")}}/cert-key.pem'
-        - kubeconfig_file: '{{playbook_dir}}/target/config/{{user_name|default("admin")}}.kubeconfig'
+        - client_cert: '{{playbook_dir}}/target/cert/{{user_name}}/cert.pem'
+        - client_key: '{{playbook_dir}}/target/cert/{{user_name}}/cert-key.pem'
+        - kubeconfig_file: '{{playbook_dir}}/target/config/{{user_name}}.kubeconfig'
         - ca_cert: '{{playbook_dir}}/target/cert/ca/cert.pem'
 
 
     - name: install bash command line activator
       template:
         src: '{{role_path}}/templates/activate.sh.j2'
-        dest: '{{playbook_dir}}/target/{{user_name|default("admin")}}-activate.sh'
+        dest: '{{playbook_dir}}/target/{{user_name}}-activate.sh'
         mode: ugo+x
 
 
