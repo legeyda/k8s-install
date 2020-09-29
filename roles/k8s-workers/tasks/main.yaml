@@ -8,15 +8,13 @@
       destination_hosts: '{{k8s_controller_hosts|default("")}}'
 
   - name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
-    shell: swapoff -a
+    block:
+      - shell: swapoff -a
+      - replace:
+          path: /etc/fstab
+          regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
+          replace: '# \1'
     
-  - name: Disable SWAP in fstab since kubernetes can't work with swap enabled (2/2)
-    replace:
-      path: /etc/fstab
-      regexp: '^([^#].*?\sswap\s+sw\s+.*)$'
-      replace: '# \1'
-  
-  
   - file:
       path: '{{item}}'
       state: directory
@@ -53,16 +51,6 @@
       - socat
       - conntrack
       - ipset
-
-
-  - name: create network configuration files
-    template:
-      src: '{{role_path}}/templates/{{item}}.conf.j2'
-      dest: '/etc/cni/net.d/{{item}}.conf'
-    with_items:
-      - 10-bridge
-      - 99-loopback
-
 
   - name:
     file:
@@ -157,7 +145,7 @@
           flannel_ip_address: '{{hostvars[inventory_hostname].internal_ip_address|default(hostvars[inventory_hostname].ansible_default_ipv4.address)|default(hostvars[inventory_hostname].ansible_all_ipv4_addresses[0])}}'
       - shell: 
           cmd: >
-            echo "export IFACE=$(ifconfig | grep -B1 {{internal_iface|default(flannel_ip_address)}} | head -1 | cut -f1 -d:)" \
+            echo "IFACE=$(ifconfig | grep -B1 {{internal_iface|default(flannel_ip_address)}} | head -1 | cut -f1 -d:)" \
                 > /etc/k8s/flannel/env.sh
 
   - name: wait till kube-apiserver finds nodes
