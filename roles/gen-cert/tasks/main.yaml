@@ -1,4 +1,3 @@
-
 - name: 'get stat for {{cert_dir}}/cert.pem'
   stat:
     path: '{{cert_dir}}/cert.pem'
@@ -45,17 +44,22 @@
       block:
         - set_fact:
             sign_request: '{{fetch_result.dest}}'
+        - set_fact:
+            cert_host_list: >-
+              {%- for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') -%}
+                {{hostname}}{%- if not loop.last -%},{%- endif -%}
+              {%- endfor -%}
 
         - name: sign cert request locally with ca private key
-          shell: 
-            cmd: >
-              {{playbook_dir}}/target/bin/cfssl sign \
-                      -ca {{playbook_dir}}/target/cert/ca/cert.pem \
-                      -ca-key '{{playbook_dir}}/target/cert/ca/cert-key.pem' \
-                      -config='{{playbook_dir}}/target/cert/ca/config.json' \
-                      -profile {{config_profile|default('default')}} \
-                      {{sign_request}} | \
-              {{playbook_dir}}/target/bin/cfssljson -bare {{sign_request|dirname}}/{{sign_request|basename|splitext|first}}
+          shell: >-
+            '{{playbook_dir}}/target/bin/cfssl' sign \
+                    '-ca={{playbook_dir}}/target/cert/ca/cert.pem' \
+                    '-ca-key={{playbook_dir}}/target/cert/ca/cert-key.pem' \
+                    '-config={{playbook_dir}}/target/cert/ca/config.json' \
+                    '-profile={{config_profile|default('default')}}' \
+                    -hostname={{cert_host_list}} \
+                    '{{sign_request}}' | \
+                '{{playbook_dir}}/target/bin/cfssljson' -bare '{{sign_request|dirname}}/{{sign_request|basename|splitext|first}}'
                   
     - name: copy back to remote signed certificate for {{cert_dir}}
       copy:

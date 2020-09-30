@@ -115,7 +115,7 @@
         client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
       with_items: *binaries
 
-    - name: download kube-apiserver binary distribution
+    - name: download k8s control plane binary distribution
       get_url:
         url: 'https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/{{item}}'
         dest: '/usr/local/bin/{{item}}'
@@ -156,5 +156,5 @@
             cmd: >
               kubectl --kubeconfig {{playbook_dir}}/target/config/admin.kubeconfig \
                   create \
-                  -f {{role_path}}/templates/create-role.yml \
-                  -f {{role_path}}/templates/bind-role.yml
+                  -f {{role_path}}/files/create-role.yml \
+                  -f {{role_path}}/files/bind-role.yml

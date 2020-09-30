@@ -5,7 +5,7 @@ data-dir: /opt/lib/etcd
 
 
 
-name: {{etcd_node_name|mandatory}}
+name: {{etcd_node_name | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) | mandatory}}
 initial-cluster-token: 'etcd-cluster'
 initial-cluster-state: {{initial_cluster_state|default('new')}}
 

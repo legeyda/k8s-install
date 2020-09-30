@@ -1,42 +1,32 @@
 - name: install etcd
   become: yes
   block:
-    - name: init temp download dir
-      file:
-        path:  '{{dir}}'
-        state: 'directory'
-      loop:
-        - /tmp/download-etcd
-      loop_control: {loop_var: dir}
-      
-    - name: download targz
-      get_url:
-         url: 'https://github.com/etcd-io/etcd/releases/download/v3.4.10/etcd-v3.4.10-linux-amd64.tar.gz'
-         dest: /tmp/download-etcd/etcd-v3.4.10-linux-amd64.tar.gz
 
-    - name: extract
-      unarchive:
-        src: /tmp/download-etcd/etcd-v3.4.10-linux-amd64.tar.gz
-        dest: /tmp/download-etcd
-        remote_src: yes
-
-    - name: install
-      copy:
-        src: '/tmp/download-etcd/etcd-v3.4.10-linux-amd64/{{item}}'
-        dest: /usr/local/bin
-        remote_src: yes
-        mode: ugo+x
-      with_items:
-        - etcd
-        - etcdctl
+    - name: download etcd binaries
+      block:
+        - file: 
+            path:  '/tmp/download-etcd'
+            state: 'directory'
+            recurse: yes
+        - unarchive:
+            src: 'https://github.com/etcd-io/etcd/releases/download/v3.4.10/etcd-v3.4.10-linux-amd64.tar.gz'
+            remote_src: yes
+            dest: /tmp/download-etcd
+            creates: /tmp/download-etcd/etcd-v3.4.10-linux-amd64
+        - copy:
+            src: '/tmp/download-etcd/etcd-v3.4.10-linux-amd64/{{item}}'
+            remote_src: yes
+            dest: /usr/local/bin
+            mode: ugo+x
+          with_items:
+            - etcd
+            - etcdctl
 
     - name: install etcctl wrapper with predefined options
       template:
         src: '{{role_path}}/templates/etcdctlwrap'
         dest: /usr/local/bin/etcdctlwrap
         mode: ugo+x
-
-          
 
     - name: ensure directories exist
       file: 
@@ -60,11 +50,6 @@
         common_name: 'etcd-{{cert_bearer}}'
       loop: ['server', 'peer', 'client']
       loop_control: {loop_var: cert_bearer}
-
-    # todo inline to config.yaml.j2
-    - name: guess etcd node name
-      set_fact:
-        etcd_node_name: '{{ etcd_node_name | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) }}'
 
     - name: create etcd config file
       template: 

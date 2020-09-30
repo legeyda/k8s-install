@@ -3,7 +3,7 @@
 
   "hosts": [
 {% for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') %}
-    "{{hostname}}"{% if not loop.last %},{% endif %}
+    "{{hostname}}"{% if not loop.last %}, {% endif %}
 {%- endfor %}
   ],
   "key": {
