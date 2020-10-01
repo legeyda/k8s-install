@@ -7,6 +7,13 @@
     vars:
       destination_hosts: '{{k8s_controller_hosts|default("")}}'
 
+  - name: local kernel module br_netfilter
+    block:
+      - shell: modprobe br_netfilter
+      - lineinfile:
+          path: /etc/modules
+          line: br_netfilter
+
   - name: Disable SWAP since kubernetes can't work with swap enabled (1/2)
     block:
       - shell: swapoff -a
