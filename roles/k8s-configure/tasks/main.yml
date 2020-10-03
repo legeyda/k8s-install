@@ -1,0 +1,37 @@
+- name: 'configure cluster'
+  delegate_to: localhost
+  become: no
+  block:
+    
+    - name: check connection to apiserver
+      shell: 'kubectl --kubeconfig "{{playbook_dir}}/target/config/admin.kubeconfig" get pods'
+
+    - name: 'apply remote configuration {{item}}'
+      shell: 'kubectl --kubeconfig {{playbook_dir}}/target/config/admin.kubeconfig create -f {{item}}'
+      with_items:
+        - 'https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml'
+        - 'https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/baremetal/deploy.yaml'
+        - 'https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml'
+        - 'https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml'
+      ignore_errors: yes
+    - set_fact:
+        random_128_bytes: "{{ lookup('password', '/dev/null length=128') }}"
+
+    - file:
+        path: '{{playbook_dir}}/target/apply-templates/'
+        state: directory
+        recurse: yes
+            
+    - template:
+        src: '{{role_path}}/templates/{{item}}.j2'
+        dest: '{{playbook_dir}}/target/apply-templates/{{item}}'
+      with_items: &yamls
+        - admin-service-account.yml
+        - coredns.yml
+        - kube-flannel.yml
+        - kubernetes-dashboard-ingress.yml
+        - metallb-config.yml
+    - name: 'apply local configuration file {{item}}'
+      shell: 'kubectl --kubeconfig "{{playbook_dir}}/target/config/admin.kubeconfig" create -f "{{playbook_dir}}/target/apply-templates/{{item}}"'
+      ignore_errors: yes
+      with_items: *yamls

@@ -1,0 +1,2 @@
+cluster_dns: 10.32.0.10
+cluster_domain: cluster.local

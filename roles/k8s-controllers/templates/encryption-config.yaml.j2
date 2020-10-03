@@ -7,5 +7,5 @@ resources:
       - aescbc:
           keys:
             - name: key1
-              secret: '{{99999999999999999999999999999999|random|b64encode}}'
+              secret:  {{lookup('password', '/dev/null length=32')|b64encode}}
       - identity: {}

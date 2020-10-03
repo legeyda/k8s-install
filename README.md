@@ -2,9 +2,34 @@
 Ansible playbook to bootstrap kubernetes (work in progress)
 ================================================================
 
+Ansible playbook bootstrapping secure highly available kubernetes.
+Script is generally based on https://github.com/kelseyhightower/kubernetes-the-hard-way,
+but adopted for bare-metal installation.
+After successfull run you get:
+
+	- highly available standalone [etcd](https://etcd.io/) cluster
+	- highly available k8s control-plane cluster
+	- tls-security
+	- [flannel](https://github.com/coreos/flannel) networking
+	- [coredns](https://github.com/coredns/deployment/tree/master/kubernetes)
+	- [ingress (kubernetes nginx)](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+	- [kubernetes-dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
+
+
+Quik start
+--------------
+
+Bootstrap kubernetes 
+	
+	ansible-playbook k8s.yml k8s-hosts
+	. target/admin-configure.sh
+	kubectl get svc
+
 
 Install kubernetes
 -----------------------
+
+ansible-playbook k8s.yml
 
 1.	Configure your inventory.
 	Ensure file `~/.ansible.cfg` has content like the following.
@@ -56,16 +81,6 @@ Install kubernetes
 	Or run single role, e.g.:
 
 		ansible-playbook --become run-role.yml -e play_hosts=k8s -e play_role=k8s-controllers -e etcd_hosts=etcd_hosts
-
-
-
-Quick install on thee nodes
----------------------------------
-
-	ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=k8s-1,k8s-2 \
-	&& ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s-2,k8s-3 -e etcd_hosts=k8s-1,k8s-2 -e k8s_worker_hosts=k8s-1,k8s-3 \
-	&& ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s-1,k8s-3 -e k8s_controller_hosts=k8s-2,k8s-3
-
 
 
 

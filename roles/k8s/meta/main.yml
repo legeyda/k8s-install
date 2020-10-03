@@ -1,0 +1,6 @@
+dependencies:
+  - role: etcd
+  - role: k8s-controllers
+  - role: k8s-workers
+  - role: k8s-configure
+    
