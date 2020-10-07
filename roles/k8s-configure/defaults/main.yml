@@ -1,2 +1,4 @@
 cluster_dns: 10.32.0.10
 cluster_domain: cluster.local
+ingress_node_http_port: 30080
+ingress_node_https_port: 30443

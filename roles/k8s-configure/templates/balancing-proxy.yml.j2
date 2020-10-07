@@ -1,0 +1,47 @@
+---
+apiVersion: v1
+kind: ConfigMap
+metadata:
+  name: balancing-proxy
+  namespace: ingress-nginx
+data:
+  haproxy-config: |-
+    frontend public_https
+    bind 0.0.0.0:443
+    mode tcp
+    use_backend nodeport_https
+    
+    backend nodeport_https
+    mode tcp
+    option ssl-hello-chk
+    server nodeport_https 127.0.0.1:{{ingress_node_https_port}}
+
+
+---
+apiVersion: apps/v1
+kind: DaemonSet
+metadata:
+  name: balancing-proxy
+  namespace: ingress-nginx
+spec:
+  selector:
+    matchLabels:
+      name:  balancing-proxy
+  template:
+    metadata:
+      labels:
+        name: balancing-proxy
+    spec:
+      hostNetwork: true
+      priorityClassName: system-node-critical
+      containers:
+        - name: haproxy
+          image: haproxy
+          volumeMounts:
+            - name: haproxy-config
+              mountPath: /usr/local/etc/haproxy/haproxy.cfg
+              subPath: haproxy-config
+      volumes:
+        - name: haproxy-config
+          configMap:
+            name: balancing-proxy

@@ -3,19 +3,26 @@
   become: no
   block:
     
-    - name: check connection to apiserver
-      shell: 'kubectl --kubeconfig "{{playbook_dir}}/target/config/admin.kubeconfig" get pods'
-
-    - name: 'apply remote configuration {{item}}'
-      shell: 'kubectl --kubeconfig {{playbook_dir}}/target/config/admin.kubeconfig create -f {{item}}'
-      with_items:
-        - 'https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml'
-        - 'https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/baremetal/deploy.yaml'
-        - 'https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/namespace.yaml'
-        - 'https://raw.githubusercontent.com/metallb/metallb/v0.9.3/manifests/metallb.yaml'
-      ignore_errors: yes
     - set_fact:
+        local_kubectl_command: "{{playbook_dir}}/target/bin/kubectl --kubeconfig '{{playbook_dir}}/target/config/admin.kubeconfig'"
         random_128_bytes: "{{ lookup('password', '/dev/null length=128') }}"
+
+    - lineinfile:
+        path: '{{playbook_dir}}/target/admin-activate.sh'
+        line: '{{item}}'
+      with_items:
+        - alias 'token=kubectl describe secret -n kube-system $(kubectl get secrets -n kube-system | grep ^admin- | cut -f1 -d" ")'
+        - alias 'dashboard=kubectl port-forward -n kubernetes-dashboard $(kubectl -n kubernetes-dashboard get pods | grep ^kubernetes-dashboard- | cut -f1 -d" ") 8443:8443'
+
+    - name: check connection to apiserver
+      shell: '{{local_kubectl_command}} get pods'
+
+    - name: 'apply remote configuration'
+      shell: '{{local_kubectl_command}} {{item}}'
+      with_items:
+        - 'apply -f https://raw.githubusercontent.com/kubernetes/dashboard/v2.0.0/aio/deploy/recommended.yaml'
+        - 'apply -f https://raw.githubusercontent.com/kubernetes/ingress-nginx/controller-v0.35.0/deploy/static/provider/baremetal/deploy.yaml'
+        - 'delete -A ValidatingWebhookConfiguration ingress-nginx-admission'
 
     - file:
         path: '{{playbook_dir}}/target/apply-templates/'
@@ -30,8 +37,14 @@
         - coredns.yml
         - kube-flannel.yml
         - kubernetes-dashboard-ingress.yml
-        - metallb-config.yml
-    - name: 'apply local configuration file {{item}}'
-      shell: 'kubectl --kubeconfig "{{playbook_dir}}/target/config/admin.kubeconfig" create -f "{{playbook_dir}}/target/apply-templates/{{item}}"'
-      ignore_errors: yes
+        - balancing-proxy.yml
+    - name: apply local configuration file
+      shell: '{{local_kubectl_command}} apply -f "{{playbook_dir}}/target/apply-templates/{{item}}"'
       with_items: *yamls
+
+    - shell: >-
+        {{local_kubectl_command}} -n ingress-nginx patch --type=json service ingress-nginx-controller -p
+        '[{"op": "replace", "path": "/spec/ports", "value": [
+        {"name": "http",  "protocol": "TCP", "port": 80,  "targetPort": "http",  "nodePort": {{ingress_node_http_port}} },
+        {"name": "https", "protocol": "TCP", "port": 443, "targetPort": "https", "nodePort": {{ingress_node_https_port}} }
+        ]}]'

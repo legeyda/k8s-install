@@ -24,6 +24,7 @@ Bootstrap kubernetes
 	ansible-playbook k8s.yml k8s-hosts
 	. target/admin-configure.sh
 	kubectl get svc
+	# go to https://$ANY_NODE_IP_OR_HOST/kubernetes-dashboard/
 
 
 Install kubernetes
@@ -81,20 +82,6 @@ ansible-playbook k8s.yml
 	Or run single role, e.g.:
 
 		ansible-playbook --become run-role.yml -e play_hosts=k8s -e play_role=k8s-controllers -e etcd_hosts=etcd_hosts
-
-
-
-Smoke test (from kubernetes the hard way)
------------------------------------------------
-
-	ssh user@one-of-k8s-controllers
-	kubectl create deployment nginx --image=nginx
-	sleep 3
-	kubectl get pods -l app=nginx
-	POD_NAME=$(kubectl get pods -l app=nginx -o jsonpath="{.items[0].metadata.name}")	
-	kubectl port-forward $POD_NAME 8080:80
-	curl --head http://127.0.0.1:8080
-
 
 
 Working with etcd node failures
