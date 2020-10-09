@@ -21,7 +21,7 @@ Quik start
 
 Bootstrap kubernetes 
 	
-	ansible-playbook k8s.yml k8s-hosts
+	ansible-playbook --become run-role.yml -e role_name=k8s -e host_pattern=k8s-1,k8s-2,k8s-3
 	. target/admin-configure.sh
 	kubectl get svc
 	# go to https://$ANY_NODE_IP_OR_HOST/kubernetes-dashboard/
