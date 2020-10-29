@@ -1,6 +1,7 @@
 - name: 'configure cluster'
   delegate_to: localhost
   become: no
+  run_once: yes
   block:
     
     - set_fact:
@@ -34,8 +35,8 @@
         dest: '{{playbook_dir}}/target/apply-templates/{{item}}'
       with_items: &yamls
         - admin-service-account.yml
-        - coredns.yml
         - kube-flannel.yml
+        - coredns.yml
         - kubernetes-dashboard-ingress.yml
         - balancing-proxy.yml
     - name: apply local configuration file
