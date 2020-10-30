@@ -1,0 +1,9 @@
+[Unit]
+Description=attach ceph osd loop device on boot
+
+[Service]
+Type=simple
+ExecStart=losetup -l -P '/dev/{{ceph_osd_device_name}}' '{{ceph_osd_device_data_file}}'
+
+[Install]
+WantedBy=multi-user.target

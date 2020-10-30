@@ -1,0 +1,3 @@
+ceph_osd_device_size: 10G
+ceph_osd_device_name: loop99
+ceph_osd_device_data_file: /var/lib/rook/rook-ceph/osd-data
