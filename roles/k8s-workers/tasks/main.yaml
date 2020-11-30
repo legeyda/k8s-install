@@ -58,6 +58,7 @@
       - socat
       - conntrack
       - ipset
+      - lvm2 # required by ceph
 
   - name:
     file:

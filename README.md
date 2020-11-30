@@ -69,19 +69,13 @@ ansible-playbook k8s.yml
 
 		ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s_controllers -e etcd_hosts=etcd -e k8s_worker_hosts=k8s_workers
 
-4.	Install kubernetes controllers, given etcd and workers hosts are known
+4.	Install kubernetes workers, given controller hosts are known
 
 		ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s_workers -e k8s_controller_hosts=k8s_controllers
 
+5.	Configure cluster
 
-2.	Run entire kubernetes installation
-
-		cd k8s-playbook
-		ansible-playbook all.yml -e play_hosts=k8s
-
-	Or run single role, e.g.:
-
-		ansible-playbook --become run-role.yml -e play_hosts=k8s -e play_role=k8s-controllers -e etcd_hosts=etcd_hosts
+		ansible-playbook run-role.yml -e role_name=k8s-configure -e host_pattern=k8s_controller
 
 
 Working with etcd node failures
