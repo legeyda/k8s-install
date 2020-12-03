@@ -11,7 +11,7 @@ initial-cluster-state: {{initial_cluster_state|default('new')}}
 
 # todo: something weird here
 initial-cluster: {% for host in ansible_play_hosts -%}
-  {{hostvars[host].etcd_node_name|mandatory}}={{protocol}}://{{hostvars[host].internal_hostname|default(host)}}:2380{% if not loop.last %},{% endif %}
+  {{hostvars[host].etcd_node_name | default("etcd-" + loop.index|string) | mandatory}}={{protocol}}://{{hostvars[host].internal_hostname|default(host)}}:2380{% if not loop.last %},{% endif %}
 {%- endfor %}
 
 initial-advertise-peer-urls: {{protocol}}://{{internal_hostname|default(inventory_hostname)}}:2380
