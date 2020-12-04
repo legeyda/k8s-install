@@ -16,6 +16,17 @@ data:
     option ssl-hello-chk
     server nodeport_https 127.0.0.1:{{ingress_node_https_port}}
 
+    frontend public_http
+    bind 0.0.0.0:80
+    mode tcp
+    use_backend nodeport_http
+    
+    backend nodeport_http
+    mode tcp
+    option ssl-hello-chk
+    server nodeport_http 127.0.0.1:{{ingress_node_http_port}}
+
+
 
 ---
 apiVersion: apps/v1
