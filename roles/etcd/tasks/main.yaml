@@ -51,6 +51,9 @@
       loop: ['server', 'peer', 'client']
       loop_control: {loop_var: cert_bearer}
 
+    - set_fact:
+        etcd_host_list: '{{lookup("inventory_hostnames", etcd_hosts, wantlist=true) if (etcd_hosts is defined) else ansible_play_hosts_all}}'
+
     - name: create etcd config file
       template: 
         src:  '{{role_path}}/templates/config.yaml.j2'

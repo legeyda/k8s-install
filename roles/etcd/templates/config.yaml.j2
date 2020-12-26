@@ -5,13 +5,13 @@ data-dir: /opt/lib/etcd
 
 
 
-name: {{etcd_node_name | default("etcd-" + (1+ansible_play_batch.index(inventory_hostname))|string) | mandatory}}
-initial-cluster-token: 'etcd-cluster'
-initial-cluster-state: {{initial_cluster_state|default('new')}}
+name: {{etcd_node_name | default("etcd-" + (1+ansible_play_hosts_all.index(inventory_hostname))|string) | mandatory}}
+initial-cluster-token: {{initial_cluster_token}}
+initial-cluster-state: {{initial_cluster_state}}
 
 # todo: something weird here
-initial-cluster: {% for host in ansible_play_hosts -%}
-  {{hostvars[host].etcd_node_name | default("etcd-" + loop.index|string) | mandatory}}={{protocol}}://{{hostvars[host].internal_hostname|default(host)}}:2380{% if not loop.last %},{% endif %}
+initial-cluster: {% for host in etcd_host_list -%}
+  {{hostvars[host].etcd_node_name | default("etcd-" + loop.index|string)}}={{protocol}}://{{hostvars[host].internal_hostname|default(host)}}:2380{% if not loop.last %},{% endif %}
 {%- endfor %}
 
 initial-advertise-peer-urls: {{protocol}}://{{internal_hostname|default(inventory_hostname)}}:2380
