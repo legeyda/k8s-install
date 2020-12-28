@@ -7,13 +7,13 @@ Script is generally based on https://github.com/kelseyhightower/kubernetes-the-h
 but adopted for bare-metal installation.
 After successfull run you get:
 
-	- highly available standalone [etcd](https://etcd.io/) cluster
-	- highly available k8s control-plane cluster
-	- tls-security
-	- [flannel](https://github.com/coreos/flannel) networking
-	- [coredns](https://github.com/coredns/deployment/tree/master/kubernetes)
-	- [ingress (kubernetes nginx)](https://kubernetes.io/docs/concepts/services-networking/ingress/)
-	- [kubernetes-dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
+- highly available standalone [etcd](https://etcd.io/) cluster
+- highly available k8s control-plane cluster
+- tls-security of all communications (peer etcd, kube-apiserver to etcd)
+- [flannel](https://github.com/coreos/flannel) networking
+- [coredns](https://github.com/coredns/deployment/tree/master/kubernetes)
+- [ingress (kubernetes nginx)](https://kubernetes.io/docs/concepts/services-networking/ingress/)
+- [kubernetes-dashboard](https://kubernetes.io/docs/tasks/access-application-cluster/web-ui-dashboard/)
 
 
 Quik start
@@ -24,15 +24,14 @@ Bootstrap kubernetes
 	ansible-playbook --become run-role.yml -e role_name=k8s -e host_pattern=k8s-1,k8s-2,k8s-3
 	. target/admin-configure.sh
 	kubectl get svc
-	# go to https://$ANY_NODE_IP_OR_HOST/kubernetes-dashboard/
+	# go to https://$ANY_NODE_IP_OR_HOST/kubernetes-dashboard/ to access kubernetes-dashboard
 
 
 Install kubernetes
 -----------------------
 
-ansible-playbook k8s.yml
-
 1.	Configure your inventory.
+
 	Ensure file `~/.ansible.cfg` has content like the following.
 
 		[defaults]
@@ -40,25 +39,19 @@ ansible-playbook k8s.yml
 
 	Create file `~/.ansible-hosts.ini` with content like the following.
 
-		[etcd]
+		[k8s]
 		k8s-1 internal_ip_address=192.168.56.101
 		k8s-2 internal_ip_address=192.168.56.102
-
-		[k8s_controllers]
 		k8s-3 internal_ip_address=192.168.56.103
-		k8s-4 internal_ip_address=192.168.56.104
-
-		[k8s_workers]
-		k8s-5 internal_ip_address=192.168.56.105
-		k8s-6 internal_ip_address=192.168.56.106
 	
-	If any host have multiple ip addresses, use `internal_ip_address` variable
+	If any host have multiple ip addresses (due to multiple network adapters),
+	use `internal_ip_address` variable
 	to specify which one is for communication between hosts inside cluster.
 
 
 2.	Install etcd
 
-		ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=etcd
+		ansible-playbook --become run-role.yml -e role_name=etcd -e host_pattern=k8s-1,k8s-2,k8s-3
 
 	Check etcd works
 
@@ -67,15 +60,15 @@ ansible-playbook k8s.yml
 
 3.	Install kubernetes controllers, given etcd and workers hosts are known
 
-		ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s_controllers -e etcd_hosts=etcd -e k8s_worker_hosts=k8s_workers
+		ansible-playbook --become run-role.yml -e role_name=k8s-controllers -e host_pattern=k8s-1,k8s-2,k8s-3 -e etcd_hosts=k8s-1,k8s-2,k8s-3 -e k8s_worker_hosts=k8s-1,k8s-2,k8s-3
 
 4.	Install kubernetes workers, given controller hosts are known
 
-		ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s_workers -e k8s_controller_hosts=k8s_controllers
+		ansible-playbook --become run-role.yml -e role_name=k8s-workers -e host_pattern=k8s-1,k8s-2,k8s-3 -e k8s_controller_hosts=k8s-1,k8s-2,k8s-3
 
 5.	Configure cluster
 
-		ansible-playbook run-role.yml -e role_name=k8s-configure -e host_pattern=k8s_controller
+		ansible-playbook run-role.yml -e role_name=k8s-configure -e host_pattern=k8s-1,k8s-2,k8s-3
 
 
 Working with etcd node failures
