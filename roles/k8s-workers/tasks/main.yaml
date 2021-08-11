@@ -100,6 +100,13 @@
       src: '{{role_path}}/templates/docker-config.json.j2'
       dest: /etc/docker/daemon.json
 
+  - name: restart dockerd after configuration change
+    systemd:
+      name: docker
+      enabled: yes
+      state: restarted
+
+
 
   - when: k8s_controller_hosts is defined
     block:

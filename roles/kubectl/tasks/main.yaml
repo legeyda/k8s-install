@@ -5,8 +5,12 @@
     state: directory
     recurse: yes
 
-- name: download kubectl binary distribution
+- name: 'download kubectl binary distribution to {{kubectl_executable}}'
   get_url:
     url: 'https://storage.googleapis.com/kubernetes-release/release/v1.18.6/bin/linux/amd64/kubectl'
     dest: '{{kubectl_executable}}'
-    mode: ugo+x
+
+- name: 'ensuring {{kubectl_executable}} is executable'
+  ansible.builtin.file:
+    path: '{{kubectl_executable}}'
+    mode: '+x'

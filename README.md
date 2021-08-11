@@ -19,10 +19,11 @@ After successfull run you get:
 Quik start
 --------------
 
-Bootstrap kubernetes 
+Bootstrap kubernetes
 	
+	cd k8s-install
 	ansible-playbook --become run-role.yml -e role_name=k8s -e host_pattern=k8s-1,k8s-2,k8s-3
-	. target/admin-configure.sh
+	. target/admin-activate.sh
 	kubectl get svc
 	# go to https://$ANY_NODE_IP_OR_HOST/kubernetes-dashboard/ to access kubernetes-dashboard
 

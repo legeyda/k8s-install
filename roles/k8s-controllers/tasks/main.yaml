@@ -155,6 +155,6 @@
         - shell: 
             cmd: >
               kubectl --kubeconfig {{playbook_dir}}/target/config/admin.kubeconfig \
-                  create \
+                  apply \
                   -f {{role_path}}/files/create-role.yml \
                   -f {{role_path}}/files/bind-role.yml
