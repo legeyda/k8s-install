@@ -70,7 +70,7 @@
           vars:
             client_name: admin
             client_cert: /etc/k8s/cert/admin/cert.pem
-            client_key: /etc/k8s/cert/admin/cert-key.pem
+            client_key: /etc/k8s/cert/admin/key.pem
 
 
     - name: configure service account certificate
@@ -112,7 +112,7 @@
       vars:
         client_name: '{{item}}'
         client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
-        client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
+        client_key: '/etc/k8s/cert/{{item}}/key.pem'
       with_items: *binaries
 
     - name: download k8s control plane binary distribution

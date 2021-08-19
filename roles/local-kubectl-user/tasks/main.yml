@@ -45,7 +45,7 @@
         - client_name: '{{user_name}}'
         - apiserver_hostname: '{{inventory_hostname}}'
         - client_cert: '{{playbook_dir}}/target/cert/{{user_name}}/cert.pem'
-        - client_key: '{{playbook_dir}}/target/cert/{{user_name}}/cert-key.pem'
+        - client_key: '{{playbook_dir}}/target/cert/{{user_name}}/key.pem'
         - kubeconfig_file: '{{playbook_dir}}/target/config/{{user_name}}.kubeconfig'
         - ca_cert: '{{playbook_dir}}/target/cert/ca/cert.pem'
 

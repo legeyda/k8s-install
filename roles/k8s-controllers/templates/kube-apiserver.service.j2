@@ -17,7 +17,7 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --enable-admission-plugins=NamespaceLifecycle,NodeRestriction,LimitRanger,ServiceAccount,DefaultStorageClass,ResourceQuota \
   --etcd-cafile=/etc/k8s/cert/ca/cert.pem \
   --etcd-certfile=/etc/k8s/cert/kube-apiserver/cert.pem \
-  --etcd-keyfile=/etc/k8s/cert/kube-apiserver/cert-key.pem \
+  --etcd-keyfile=/etc/k8s/cert/kube-apiserver/key.pem \
   --etcd-servers=
 {%- for host in etcd_host_list|default(ansible_play_hosts)|mandatory -%}
   https://{{host}}:2379{% if not loop.last %},{% endif %}
@@ -26,14 +26,14 @@ ExecStart=/usr/local/bin/kube-apiserver \
   --encryption-provider-config=/etc/k8s/encryption-config.yaml \
   --kubelet-certificate-authority=/etc/k8s/cert/ca/cert.pem \
   --kubelet-client-certificate=/etc/k8s/cert/kube-apiserver/cert.pem \
-  --kubelet-client-key=/etc/k8s/cert/kube-apiserver/cert-key.pem \
+  --kubelet-client-key=/etc/k8s/cert/kube-apiserver/key.pem \
   --kubelet-https=true \
   --runtime-config='api/all=true' \
   --service-account-key-file=/etc/k8s/cert/service-account/cert.pem \
   --service-cluster-ip-range=10.32.0.0/24 \
   --service-node-port-range=30000-32767 \
   --tls-cert-file=/etc/k8s/cert/kube-apiserver/cert.pem \
-  --tls-private-key-file=/etc/k8s/cert/kube-apiserver/cert-key.pem \
+  --tls-private-key-file=/etc/k8s/cert/kube-apiserver/key.pem \
   --v=2 \
   --feature-gates=EphemeralContainers=true
 Restart=on-failure

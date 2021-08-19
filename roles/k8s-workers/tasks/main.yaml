@@ -124,7 +124,7 @@
         ansible_play_batch.index(inventory_hostname) % k8s_controller_host_list|default(ansible_play_hosts)|length]}}'
       client_name: '{{item}}'
       client_cert: '/etc/k8s/cert/{{item}}/cert.pem'
-      client_key: '/etc/k8s/cert/{{item}}/cert-key.pem'
+      client_key: '/etc/k8s/cert/{{item}}/key.pem'
     with_items: &components
       - kubelet
       - kube-proxy

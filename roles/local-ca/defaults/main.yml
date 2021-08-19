@@ -1,5 +1,5 @@
 rsa_key_size: 2048
-common_name: k8s-subject
+common_name: k8s-ca
 country_name: US
 locality: Portland
 organization: Kubernetes

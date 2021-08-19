@@ -23,7 +23,7 @@ listen-peer-urls: {% for ip in ansible_all_ipv4_addresses -%}
 
 peer-transport-security:
   cert-file: /etc/etcd/cert/peer/cert.pem
-  key-file:  /etc/etcd/cert/peer/cert-key.pem
+  key-file:  /etc/etcd/cert/peer/key.pem
   client-cert-auth: true
   trusted-ca-file:  /etc/etcd/cert/ca/cert.pem
 
@@ -37,6 +37,6 @@ listen-client-urls: {{protocol}}://127.0.0.1:2379,{% for ip in ansible_all_ipv4_
 
 client-transport-security:
   cert-file: /etc/etcd/cert/server/cert.pem
-  key-file:  /etc/etcd/cert/server/cert-key.pem
+  key-file:  /etc/etcd/cert/server/key.pem
   client-cert-auth: true
   trusted-ca-file: /etc/etcd/cert/ca/cert.pem

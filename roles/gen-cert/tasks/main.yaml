@@ -7,6 +7,11 @@
   when: gen_cert_stat_result.stat.exists == False
   block:
 
+    - name: install openssl
+      package:
+        name: openssl
+        state: present
+
     - name: generate cert request on remote and fetch
       block:
         - name: ensure remote dir exists
@@ -15,26 +20,34 @@
             state: directory
             recurse: yes
 
-        - name: 'upload cert config to {{cert_dir}}/config.json'
-          template:
-            src: '{{ config_template | default(role_path + "/templates/config.json.j2") }}'
-            dest: '{{cert_dir}}/config.json'
-
-        - name: 'update cert request {{cert_dir}}/csr.json'
-          template: 
-            src:  '{{csr_template | default(role_path + "/templates/csr.json.j2") }}'
-            dest: '{{cert_dir}}/csr.json'
-
         - name: 'generate cert request {{cert_dir}}/cert.csr remotely'
-          shell:
-            cmd: >
-                /usr/local/bin/cfssl gencert -initca {{cert_dir}}/csr.json |
-                /usr/local/bin/cfssljson -bare {{cert_dir}}/cert
-            chdir: '{{cert_dir}}'
+          command:
+            argv:
+              - openssl
+              - req
+              - -newkey
+              - 'rsa:{{rsa_key_size}}'
+              - -keyout
+              - '{{cert_dir}}/key.pem'
+              - -out
+              - '{{cert_dir}}/csr.pem'
+              - -nodes
+              - -subj
+              - '/CN={{common_name}}/C={{country_name}}/L={{locality}}/O={{organization}}/OU={{organizational_unit}}/ST={{state_of_residence}}'
+              - -addext 
+              - |
+                  subjectAltName={%- for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') -%}
+                    {%- if hostname is regex('^\d+\.\d+\.\d+\.\d+$') -%}
+                      IP:
+                    {%- else -%}
+                      DNS:
+                    {%- endif -%}
+                    {{hostname}}{%- if not loop.last -%},{%- endif -%}
+                  {%- endfor -%}
 
         - name: fetch cert request for local signing
           fetch:
-            src: '{{cert_dir}}/cert.csr'
+            src: '{{cert_dir}}/csr.pem'
             dest: '{{playbook_dir}}/target/fetch'
           register: fetch_result
 
@@ -43,26 +56,44 @@
       become: no
       block:
         - set_fact:
-            sign_request: '{{fetch_result.dest}}'
-        - set_fact:
-            cert_host_list: >-
-              {%- for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') -%}
-                {{hostname}}{%- if not loop.last -%},{%- endif -%}
+            cert_signing_request: '{{fetch_result.dest}}'
+
+
+        # see https://security.stackexchange.com/a/176084
+        - copy:
+            content: |
+              subjectAltName = {% for hostname in cert_hostnames|default(['localhost', internal_hostname|default(inventory_hostname)])|select('defined') -%}
+                {%- if hostname is regex('^\d+\.\d+\.\d+\.\d+$') -%}
+                  IP:
+                {%- else -%}
+                  DNS:
+                {%- endif -%}
+                {{hostname}}{% if not loop.last %},{% endif %}
               {%- endfor -%}
+            dest: '{{cert_signing_request|dirname}}/openssl.config'
 
         - name: sign cert request locally with ca private key
-          shell: >-
-            '{{playbook_dir}}/target/bin/cfssl' sign \
-                    '-ca={{playbook_dir}}/target/cert/ca/cert.pem' \
-                    '-ca-key={{playbook_dir}}/target/cert/ca/cert-key.pem' \
-                    '-config={{playbook_dir}}/target/cert/ca/config.json' \
-                    '-profile={{config_profile|default('default')}}' \
-                    -hostname={{cert_host_list}} \
-                    '{{sign_request}}' | \
-                '{{playbook_dir}}/target/bin/cfssljson' -bare '{{sign_request|dirname}}/{{sign_request|basename|splitext|first}}'
-                  
+          command:
+            argv:
+              - openssl
+              - x509
+              - -req
+              - -in
+              - '{{cert_signing_request}}'
+              - -CA
+              - '{{playbook_dir}}/target/cert/ca/cert.pem'
+              - -CAkey
+              - '{{playbook_dir}}/target/cert/ca/key.pem'
+              - -out
+              - '{{cert_signing_request|dirname}}/cert.pem'
+              - -CAcreateserial
+              - -days
+              - 9999
+              - -extfile
+              - '{{cert_signing_request|dirname}}/openssl.config'
+
     - name: copy back to remote signed certificate for {{cert_dir}}
       copy:
-        src: '{{sign_request|dirname}}/{{sign_request|basename|splitext|first}}.pem'
+        src: '{{cert_signing_request|dirname}}/cert.pem'
         dest: '{{cert_dir}}'
         backup: yes

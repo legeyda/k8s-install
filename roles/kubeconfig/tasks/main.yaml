@@ -23,7 +23,7 @@
       set-credentials
       '{{client_name}}'
       '--client-certificate={{client_cert|default(client_cert_dir|default("/etc/k8s/cert/"+client_name) + "/cert.pem")}}'
-      '--client-key={{client_key|default(client_cert_dir|default("/etc/k8s/cert/"+client_name) + "/cert-key.pem")}}'
+      '--client-key={{client_key|default(client_cert_dir|default("/etc/k8s/cert/"+client_name) + "/key.pem")}}'
       --embed-certs=true
       '--kubeconfig={{kubeconfig_file|default("/etc/k8s/" + client_name + ".kubeconfig")}}'
 
