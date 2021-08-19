@@ -47,7 +47,7 @@ spec:
       priorityClassName: system-node-critical
       containers:
         - name: haproxy
-          image: haproxy
+          image: haproxy:2.3.13 # the 2.4+ versions of the container will run as USER haproxy by default
           volumeMounts:
             - name: haproxy-config
               mountPath: /usr/local/etc/haproxy/haproxy.cfg
